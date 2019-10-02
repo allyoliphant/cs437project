@@ -24,7 +24,7 @@ public class Indexing {
 		    while (s.hasNext()) {
 		    	String line = s.nextLine();
 		    	line = line.toLowerCase();
-		    	line = line.replaceAll("[.,:]", "");  // remove unnecessary characters
+		    	line = line.replaceAll("[.,:!?;()']", "");  // remove unnecessary characters
 		    	content += line + " ";		    	
 		    }		    		    
 			String[] data = {file.getName(), content};
