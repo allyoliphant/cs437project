@@ -1,0 +1,29 @@
+@import url('https://fonts.googleapis.com/css?family=Anonymous+Pro&display=swap');
+
+
+body {
+	background-color: #1f1f1f;
+	color: white;
+	text-align: center;
+	font-family: 'Anonymous Pro', monospace;
+}
+
+h1 {
+	font-family: 'Anonymous Pro', monospace;
+	font-size: 55px;
+	font-weight: normal;
+	margin: 85px 20px 70px 20px;
+}
+
+input {
+	min-height: 25px;
+	padding: 5px 10px;
+}
+
+button {
+	font-family:'Anonymous Pro', monospace;
+	border: none;
+	background-color: white;
+	min-height: 35px;
+	padding: 0 15px;
+}

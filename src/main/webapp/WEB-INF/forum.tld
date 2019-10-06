@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE taglib
+PUBLIC "-//Sun Microsystems, Inc.//DTD JSP Tag Library 1.2//EN"
+"http://java.sun.com/dtd/web-jsptaglibrary_1_2.dtd">
+<taglib>
+  <tlib-version>1.0</tlib-version>
+  <jsp-version>1.2</jsp-version>
+  <short-name>forum</short-name>
+  <uri>http://java.jeffheaton.com/taglib/jstl/forum</uri>
+  <display-name>Forum Example</display-name>
+  <description>An example tag library used to implement a
+  forum.</description>
+
+  <tag>
+    <name>loadUser</name>
+    <tag-class>com.heaton.forum.LoadUserTag</tag-class>
+    <body-content>empty</body-content>
+    <description>Used to load a user.</description>
+    <attribute>
+      <name>var</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+    <attribute>
+      <name>id</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+    <attribute>
+      <name>scope</name>
+      <required>false</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+  </tag>
+
+  <tag>
+    <name>saveUser</name>
+    <tag-class>com.heaton.forum.SaveUserTag</tag-class>
+    <body-content>empty</body-content>
+    <description>Used to save a user.</description>
+    <attribute>
+      <name>var</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+  </tag>
+
+  <tag>
+    <name>loginUser</name>
+    <tag-class>com.heaton.forum.LoginUserTag</tag-class>
+    <body-content>empty</body-content>
+    <description>Login a user.</description>
+    <attribute>
+      <name>var</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+    <attribute>
+      <name>id</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+    <attribute>
+      <name>scope</name>
+      <required>false</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+
+    <attribute>
+      <name>password</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+  </tag>
+
+  <tag>
+    <name>expire</name>
+    <tag-class>com.heaton.forum.ExpireTag</tag-class>
+    <body-content>JSP</body-content>
+    <description>Check to see if the session has
+    expired.</description>
+  </tag>
+
+  <tag>
+    <name>newUser</name>
+    <tag-class>com.heaton.forum.NewUserTag</tag-class>
+    <body-content>empty</body-content>
+    <description>Create a new user.</description>
+    <attribute>
+      <name>var</name>
+      <required>false</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+    <attribute>
+      <name>id</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+    <attribute>
+      <name>scope</name>
+      <required>false</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+    <attribute>
+      <name>password</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+  </tag>
+
+  <tag>
+    <name>listForums</name>
+    <tag-class>com.heaton.forum.ListForumsTag</tag-class>
+    <body-content>empty</body-content>
+    <description>List the forums.</description>
+    <attribute>
+      <name>var</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+    <attribute>
+      <name>scope</name>
+      <required>false</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+  </tag>
+
+  <tag>
+    <name>listMessages</name>
+    <tag-class>com.heaton.forum.ListMessagesTag</tag-class>
+    <body-content>empty</body-content>
+    <description>List the messages in a forum.</description>
+    <attribute>
+      <name>code</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+    <attribute>
+      <name>var</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+    <attribute>
+      <name>scope</name>
+      <required>false</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+  </tag>
+
+  <tag>
+    <name>loadForum</name>
+    <tag-class>com.heaton.forum.LoadForumTag</tag-class>
+    <body-content>empty</body-content>
+    <description>Used to load a forum.</description>
+    <attribute>
+      <name>var</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+    <attribute>
+      <name>code</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+    <attribute>
+      <name>scope</name>
+      <required>false</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+  </tag>
+  
+  <tag>
+    <name>postMessage</name>
+    <tag-class>com.heaton.forum.PostMessageTag</tag-class>
+    <body-content>empty</body-content>
+    <description>Used to post a message.</description>
+    <attribute>
+      <name>code</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+    <attribute>
+      <name>from</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+    <attribute>
+      <name>subject</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+    <attribute>
+      <name>message</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+  </tag>
+
+  <tag>
+    <name>deleteForum</name>
+    <tag-class>com.heaton.forum.DeleteForumTag</tag-class>
+    <body-content>empty</body-content>
+    <description>Used to delete a message.</description>
+    <attribute>
+      <name>code</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+  </tag>
+
+  <tag>
+    <name>deleteMessage</name>
+    <tag-class>com.heaton.forum.DeleteMessageTag</tag-class>
+    <body-content>empty</body-content>
+    <description>Used to delete a message.</description>
+    <attribute>
+      <name>code</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+    <attribute>
+      <name>number</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+  </tag>
+
+  <tag>
+    <name>listUsers</name>
+    <tag-class>com.heaton.forum.ListUsersTag</tag-class>
+    <body-content>empty</body-content>
+    <description>Used to list users.</description>
+    <attribute>
+      <name>var</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+  </tag>
+
+  <tag>
+    <name>createForum</name>
+    <tag-class>com.heaton.forum.CreateForumTag</tag-class>
+    <body-content>empty</body-content>
+    <description>Used to edit a forum.</description>
+    <attribute>
+      <name>code</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+    <attribute>
+      <name>name</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+    <attribute>
+      <name>sequence</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+  </tag>
+
+  <tag>
+    <name>editForum</name>
+    <tag-class>com.heaton.forum.EditForumTag</tag-class>
+    <body-content>empty</body-content>
+    <description>Used to edit a forum.</description>
+    <attribute>
+      <name>code</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+    <attribute>
+      <name>name</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+    <attribute>
+      <name>sequence</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+  </tag>
+
+  <tag>
+    <name>editUser</name>
+
+    <tag-class>com.heaton.forum.EditUserTag</tag-class>
+    <body-content>empty</body-content>
+    <description>Used to edit a user's type.</description>
+    <attribute>
+      <name>id</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+    <attribute>
+      <name>type</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+  </tag>
+
+  <tag>
+    <name>deleteUser</name>
+    <tag-class>com.heaton.forum.DeleteUserTag</tag-class>
+    <body-content>empty</body-content>
+    <description>Used to delete a user.</description>
+    <attribute>
+      <name>id</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+  </tag>
+</taglib>
+
