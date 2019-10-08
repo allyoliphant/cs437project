@@ -4101,7 +4101,6 @@ braxton {45,4}
 famili {45,2}
 valu {45,2}
 season {45,5}
-6 {45,1}
 juli {45,1}
 2017 {45,3}
 trina {45,1}
@@ -7744,7 +7743,6 @@ calgari {97,1}
 vancouv {97,1}
 edmonton {97,1}
 ottawa {97,2}
-6 {97,1}
 recent {97,1}
 shift {97,1}
 mixed-us {97,1}
@@ -8164,7 +8162,6 @@ garnish {101,1}
 calendar {101,3}
 cookbook {101,1}
 p {101,1}
-12 {101,1}
 shellfish {101,3}
 gather {101,2}
 shore {101,1}
@@ -10111,7 +10108,6 @@ offic {117,2}
 branch {117,1}
 postal {117,1}
 code {117,1}
-741154 {117,1}
 depend {117,1}
 also {117,1}
 mani {117,1}
@@ -10446,7 +10442,6 @@ corner {128,1}
 us {128,1}
 highwai {128,1}
 road {128,1}
-9 {128,1}
 balloon {128,1}
 frame {128,2}
 construct {128,2}
@@ -14600,7 +14595,6 @@ jado {173,1}
 gedo {173,1}
 best {173,2}
 champ {173,1}
-25 {173,1}
 rival {173,2}
 gannosuk {173,1}
 street {173,2}
