@@ -41,7 +41,7 @@ public class Indexing {
 
 	public static void getStopwords() throws FileNotFoundException {
 		System.out.println("get list of stopwords....");
-		// stop words from https://www.ranks.nl/stopwords - the default English list
+		// stop words from https://www.ranks.nl/stopwords - the default long stop word list with ' removed
 		stopwords = new ArrayList<String>();
 		Scanner s = new Scanner(new File("src/main/resources/stopwords"));
 		while (s.hasNext()) {
@@ -93,7 +93,7 @@ public class Indexing {
 		CSVParser records = CSVFormat.EXCEL.withFirstRecordAsHeader().parse(in);
 		for (CSVRecord record : records) {
 			System.out.println("on wiki " + record.get("id") + " of 1,662,756");
-			String content = record.get("content");
+			String content = " " + record.get("content") + " ";
 			content = caseAndCharacters(content);
 			content = removeStopwords(content);
 			String[] tokens = stemContent(content);
