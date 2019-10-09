@@ -1,5 +1,6 @@
 package index;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -11,6 +12,7 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Scanner;
 
 import org.apache.commons.csv.CSVFormat;
@@ -19,7 +21,7 @@ import org.apache.commons.csv.CSVRecord;
 
 public class Indexing {
 
-	private static ArrayList<String> stopwords;
+	private static String[] stopwords = new String[424];
 	private static String pathToCSV = "src/main/resources/collection/wikipedia_text_files.csv";
 	private static String pathToVocab = "src/main/resources/vocab.txt";
 	private static String pathToIndex = "src/main/resources/index.txt";
@@ -34,18 +36,17 @@ public class Indexing {
 		s1 = s1.replaceAll("[\\x3A-\\x40]", ""); // : ; < = > ? @
 		s1 = s1.replaceAll("[\\x5B-\\x60]", ""); // [ ] ^ `
 		s1 = s1.replaceAll("[\\x7B-\\x7E]", ""); // { | } ~
-		s1 = s1.replaceAll("\\s[0-9]{1,3}\\s", " ");  // numbers with one to three digits
-		s1 = s1.replaceAll("\\s[0-9]{5,}\\s", " ");  // numbers with five or more digits
+		s1 = s1.replaceAll("\\s[0-9]{1,3}\\s", " "); // numbers with one to three digits
+		s1 = s1.replaceAll("\\s[0-9]{5,}\\s", " "); // numbers with five or more digits
 		return s1;
 	}
 
 	public static void getStopwords() throws FileNotFoundException {
 		System.out.println("get list of stopwords....");
-		// stop words from https://www.ranks.nl/stopwords - the default long stop word list with ' removed
-		stopwords = new ArrayList<String>();
+		// stopwords from https://www.lextek.com/manuals/onix/stopwords1.html
 		Scanner s = new Scanner(new File("src/main/resources/stopwords"));
-		while (s.hasNext()) {
-			stopwords.add(s.nextLine());
+		for (int i = 0; i < stopwords.length; i++) {
+			stopwords[i] = s.nextLine();
 		}
 		s.close();
 	}
@@ -67,7 +68,7 @@ public class Indexing {
 		}
 		return tokens;
 	}
-	
+
 	public static int getWordIndex(String word, ArrayList<String> index) {
 		for (int i = 0; i < index.size(); i++) {
 			String w = index.get(i).split(" ")[0];
@@ -88,7 +89,7 @@ public class Indexing {
 	private static void buildVocab() throws IOException {
 		Reader in = new FileReader(pathToCSV);
 		PrintWriter vocabWriter = new PrintWriter(new FileWriter(new File(pathToVocab)));
-		
+
 		System.out.println("get collection/build unsorted vocab....");
 		CSVParser records = CSVFormat.EXCEL.withFirstRecordAsHeader().parse(in);
 		for (CSVRecord record : records) {
@@ -110,8 +111,10 @@ public class Indexing {
 				int f = freq.get(content.indexOf(word)) + 1;
 				freq.set(content.indexOf(word), f);
 			} else {
-				content.add(word);
-				freq.add(1);
+				if (word.length() > 0) {
+					content.add(word);
+					freq.add(1);
+				}
 			}
 		}
 		for (int i = 0; i < content.size(); i++) {
@@ -121,41 +124,40 @@ public class Indexing {
 
 	private static void combineSortWrite() throws IOException {
 		PrintWriter writer = new PrintWriter(new FileWriter(new File(pathToIndex)));
-		Scanner s = new Scanner(new File(pathToVocab));
+		BufferedReader bf = new BufferedReader(new FileReader(pathToVocab));
 		ArrayList<String> index = new ArrayList<String>();
-		
+		HashMap<String,String> map = new HashMap<String, String>();
+
 		System.out.println("combine vocab into index....");
 		int lineNumber = 1;
-		while (s.hasNext()) {
-			System.out.println("on line " + lineNumber + " of about 260,016,921");
-			lineNumber++;
-			String line = s.nextLine();
+		String line = bf.readLine();
+		while (line != null) {
+			System.out.println("on line " + lineNumber + " of about 231,852,674");
 			String[] entry = line.split(" ");
-			int wordIndex = getWordIndex(entry[0], index);
-			if (wordIndex != -1) {
-				String indexEntry = index.get(wordIndex);
-				for (int i = 1; i < entry.length; i++) {
-					indexEntry += " " + entry[i];
+			if (entry.length > 1) {
+				if (index.indexOf(entry[0]) != -1) {
+					map.replace(entry[0], map.get(entry[0]) + " " + entry[1]);
+				} else {
+					index.add(entry[0]);
+					map.put(entry[0], line);
 				}
-				index.set(wordIndex, indexEntry);
 			}
-			else {
-				index.add(line);
-			}
+			line = bf.readLine();
+			lineNumber++;
 		}
-		s.close();
+		bf.close();
 
 		System.out.println("sort index....");
 		Collections.sort(index, new Comparator<String>() {
 			public int compare(String strings, String otherStrings) {
 				return strings.compareTo(otherStrings);
 			}
-		});		
+		});
 
 		System.out.println("write index to file....");
-		for (String entry : index) {
-			writer.println(entry);
-		}		
+		for (int i = 0; i < index.size(); i++) {
+			writer.println(map.get(index.get(i)));
+		}
 		writer.close();
 	}
 
