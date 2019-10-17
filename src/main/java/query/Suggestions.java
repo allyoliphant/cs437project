@@ -1,7 +1,7 @@
 package query;
 
-// gets input from User class
-// returns suggested queries to User class
+//gets input from User class
+//returns suggested queries to User class
 public class Suggestions {
 
 	public Suggestions() {
@@ -12,5 +12,4 @@ public class Suggestions {
 		// TODO Auto-generated method stub
 
 	}
-
 }
