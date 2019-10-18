@@ -2,14 +2,15 @@ package index;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.io.Reader;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -30,11 +31,11 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
 public class Indexing {
 
-	private static String pathToCSV = "src/main/resources/collection/wikipedia_text_files.csv";
-	private static String pathToSERIndex = "src/main/resources/index.ser";
-	private static String pathToUnsortedIndex = "src/main/resources/unsorted-index.txt";
-	private static String pathToFreq = "src/main/resources/freq.txt";
-	private static String pathToFreqUnder15 = "src/main/resources/freqUnder15.txt";
+	private String pathToCSV = "src/main/resources/collection/wikipedia_text_files.csv";
+	private String pathToSERIndex = "src/main/resources/index.ser";
+	private String pathToUnsortedIndex = "src/main/resources/unsorted-index.txt";
+	private String pathToFreq = "src/main/resources/freq.txt";
+	private String pathToFreqUnder15 = "src/main/resources/freqUnder15.txt";
 
 	/**
 	 * Lower cases and removes certain characters
@@ -42,7 +43,8 @@ public class Indexing {
 	 * @param line that needs to be tokenized
 	 * @return tokenized line
 	 */
-	public static String caseAndCharacters(String line) {
+	public String caseAndCharacters(String line) {
+
 		String s1 = line.toLowerCase();
 
 		// see src/main/resources/asciifull.gif for ascii code translations
@@ -66,7 +68,7 @@ public class Indexing {
 	 * @return line after stopwords removed and remaining words stemmed
 	 * @throws IOException
 	 */
-	public static String stopAndStem(String line) throws IOException {
+	public String stopAndStem(String line) {
 		ObjectOpenHashSet<String> stopwords = getStopwords();
 
 		// stemmer from https://opennlp.apache.org/ - apache openNLP 1.9.1
@@ -82,12 +84,29 @@ public class Indexing {
 		return result;
 	}
 
+	@SuppressWarnings("unchecked")
+	public Object2ObjectOpenHashMap<String, Int2IntOpenHashMap> getIndex() {
+		Object2ObjectOpenHashMap<String, Int2IntOpenHashMap> index = new Object2ObjectOpenHashMap<String, Int2IntOpenHashMap>();
+		try {
+			FileInputStream fileIn = new FileInputStream(pathToSERIndex);
+			ObjectInputStream in = new ObjectInputStream(fileIn);
+			index = (Object2ObjectOpenHashMap<String, Int2IntOpenHashMap>) in.readObject();
+			in.close();
+		} catch (IOException e) {
+			System.err.println(e);
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+		}
+		return index;
+	}
+
 	/**
 	 * Main method to build the index
 	 * 
 	 * @throws IOException
 	 */
-	private static void buildIndex() throws IOException {
+	@SuppressWarnings("unused")
+	private void buildIndex() {
 		frequencies();
 		System.gc();
 		buildUnsortedIndex();
@@ -102,69 +121,73 @@ public class Indexing {
 	 * 
 	 * @throws IOException
 	 */
-	private static void frequencies() throws IOException {
-		// stopwords from:
-		// https://github.com/igorbrigadir/stopwords/blob/master/en/alir3z4.txt
-		// https://drive.google.com/file/d/1GgXVQg11M2h0RMftEH_-o1HPcJgsdWSw/view
-		ObjectOpenHashSet<String> stopwordsTemp = new ObjectOpenHashSet<String>();
-		BufferedReader s = new BufferedReader(new FileReader("src/main/resources/stopwords"));
-		String line;
-		while ((line = s.readLine()) != null) {
-			String word = line.replaceAll("\\s+", "");
-			if (!stopwordsTemp.contains(word)) {
-				stopwordsTemp.add(word);
+	private void frequencies() {
+		try {
+			// stopwords from:
+			// https://github.com/igorbrigadir/stopwords/blob/master/en/alir3z4.txt
+			// https://drive.google.com/file/d/1GgXVQg11M2h0RMftEH_-o1HPcJgsdWSw/view
+			ObjectOpenHashSet<String> stopwordsTemp = new ObjectOpenHashSet<String>();
+			BufferedReader s = new BufferedReader(new FileReader("src/main/resources/stopwords"));
+			String line;
+			while ((line = s.readLine()) != null) {
+				String word = line.replaceAll("\\s+", "");
+				if (!stopwordsTemp.contains(word)) {
+					stopwordsTemp.add(word);
+				}
 			}
-		}
-		s.close();
+			s.close();
 
-		HashMap<String, Integer> vocab = new HashMap<String, Integer>();
-		Reader in = new FileReader(pathToCSV);
-		CSVParser records = CSVFormat.EXCEL.withFirstRecordAsHeader().parse(in);
+			HashMap<String, Integer> vocab = new HashMap<String, Integer>();
+			Reader in = new FileReader(pathToCSV);
+			CSVParser records = CSVFormat.EXCEL.withFirstRecordAsHeader().parse(in);
 
-		for (CSVRecord record : records) {
-			System.out.println("freq: on wiki " + record.get("id") + " of 1,662,756");
-			String content = " " + record.get("content") + " ";
-			content = caseAndCharacters(content);
-			String[] words = content.split("\\s+");
+			for (CSVRecord record : records) {
+				System.out.println("freq: on wiki " + record.get("id") + " of 1,662,756");
+				String content = " " + record.get("content") + " ";
+				content = caseAndCharacters(content);
+				String[] words = content.split("\\s+");
 
-			HashSet<String> unique = new HashSet<String>();
-			List<String> wordsAsList = Arrays.asList(words);
+				HashSet<String> unique = new HashSet<String>();
+				List<String> wordsAsList = Arrays.asList(words);
 
-			for (String word : words) {
-				word = word.replaceAll("\\s+", "");
-				if (!unique.contains(word) && !stopwordsTemp.contains(word)) {
-					if (word.length() > 0) {
-						unique.add(word);
-						int freq = Collections.frequency(wordsAsList, word);
-						if (vocab.containsKey(word)) {
-							vocab.replace(word, vocab.get(word) + freq);
-						} else {
-							vocab.put(word, 1);
+				for (String word : words) {
+					word = word.replaceAll("\\s+", "");
+					if (!unique.contains(word) && !stopwordsTemp.contains(word)) {
+						if (word.length() > 0) {
+							unique.add(word);
+							int freq = Collections.frequency(wordsAsList, word);
+							if (vocab.containsKey(word)) {
+								vocab.replace(word, vocab.get(word) + freq);
+							} else {
+								vocab.put(word, 1);
+							}
 						}
 					}
 				}
 			}
-		}
 
-		System.out.println("sort words by their frequency....");
-		List<Map.Entry<String, Integer>> list = new LinkedList<Map.Entry<String, Integer>>(vocab.entrySet());
-		Collections.sort(list, new Comparator<Map.Entry<String, Integer>>() {
-			public int compare(Map.Entry<String, Integer> o1, Map.Entry<String, Integer> o2) {
-				return (o1.getValue()).compareTo(o2.getValue());
-			}
-		});
+			System.out.println("sort words by their frequency....");
+			List<Map.Entry<String, Integer>> list = new LinkedList<Map.Entry<String, Integer>>(vocab.entrySet());
+			Collections.sort(list, new Comparator<Map.Entry<String, Integer>>() {
+				public int compare(Map.Entry<String, Integer> o1, Map.Entry<String, Integer> o2) {
+					return (o1.getValue()).compareTo(o2.getValue());
+				}
+			});
 
-		System.out.println("print words to the two files....");
-		PrintWriter writer = new PrintWriter(new FileWriter(new File(pathToFreq)));
-		PrintWriter writerUnder15 = new PrintWriter(new FileWriter(new File(pathToFreqUnder15)));
-		for (Map.Entry<String, Integer> entry : list) {
-			writer.println(entry.getValue() + " " + entry.getKey());
-			if (entry.getValue() < 16) {
-				writerUnder15.println(entry.getKey());
+			System.out.println("print words to the two files....");
+			PrintWriter writer = new PrintWriter(new FileWriter(new File(pathToFreq)));
+			PrintWriter writerUnder15 = new PrintWriter(new FileWriter(new File(pathToFreqUnder15)));
+			for (Map.Entry<String, Integer> entry : list) {
+				writer.println(entry.getValue() + " " + entry.getKey());
+				if (entry.getValue() < 16) {
+					writerUnder15.println(entry.getKey());
+				}
 			}
+			writer.close();
+			writerUnder15.close();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
-		writer.close();
-		writerUnder15.close();
 	}
 
 	/**
@@ -173,40 +196,44 @@ public class Indexing {
 	 * 
 	 * @throws IOException
 	 */
-	private static void buildUnsortedIndex() throws IOException {
-		Object2ObjectOpenHashMap<String, String> index = new Object2ObjectOpenHashMap<String, String>();
+	private void buildUnsortedIndex() {
+		try {
+			Object2ObjectOpenHashMap<String, String> index = new Object2ObjectOpenHashMap<String, String>();
+			ObjectOpenHashSet<String> stopwords = getStopwords();
 
-		ObjectOpenHashSet<String> stopwords = getStopwords();
-
-		System.out.println("get collection/build unsorted index....");
-		CSVParser records = CSVFormat.EXCEL.withFirstRecordAsHeader().parse(new FileReader(pathToCSV));
-		for (CSVRecord record : records) {
-			System.out.println("build: on wiki " + record.get("id") + " of 1,662,756");
-			String[] content = caseAndCharacters(" " + record.get("content") + " ").split("\\s+");
-			ObjectOpenHashSet<String> unique = new ObjectOpenHashSet<String>(); // set of unique words in current doc
-			for (String word : content) {
-				// if word isn't a stopword or a duplicate
-				if (!stopwords.contains(word) && !unique.contains(word)) {
-					// nummber of times word occurs in current doc
-					int freq = Collections.frequency(Arrays.asList(content), word);
-					unique.add(word);
-					// if word already in index, append docID and frequency, else just add docID and
-					// frequency
-					index.put(word,
-							index.containsKey(word) ? index.get(word) + " {" + record.get("id") + "," + freq + "}"
-									: "{" + record.get("id") + "," + freq + "}");
+			System.out.println("get collection/build unsorted index....");
+			CSVParser records = CSVFormat.EXCEL.withFirstRecordAsHeader().parse(new FileReader(pathToCSV));
+			for (CSVRecord record : records) {
+				System.out.println("build: on wiki " + record.get("id") + " of 1,662,756");
+				String[] content = caseAndCharacters(" " + record.get("content") + " ").split("\\s+");
+				ObjectOpenHashSet<String> unique = new ObjectOpenHashSet<String>(); // set of unique words in current
+																					// doc
+				for (String word : content) {
+					// if word isn't a stopword or a duplicate
+					if (!stopwords.contains(word) && !unique.contains(word)) {
+						// nummber of times word occurs in current doc
+						int freq = Collections.frequency(Arrays.asList(content), word);
+						unique.add(word);
+						// if word already in index, append docID and frequency, else just add docID and
+						// frequency
+						index.put(word,
+								index.containsKey(word) ? index.get(word) + " {" + record.get("id") + "," + freq + "}"
+										: "{" + record.get("id") + "," + freq + "}");
+					}
 				}
 			}
-		}
 
-		System.out.println("write unsorted index to file....");
-		PrintWriter writer = new PrintWriter(new FileWriter(new File(pathToUnsortedIndex)));
-		int w = 1;
-		index.forEach((key, value) -> {
-			System.out.println("write unsort: " + w + " word of " + index.size());
-			writer.println(key + " " + value);
-		});
-		writer.close();
+			System.out.println("write unsorted index to file....");
+			PrintWriter writer = new PrintWriter(new FileWriter(new File(pathToUnsortedIndex)));
+			int w = 1;
+			index.forEach((key, value) -> {
+				System.out.println("write unsort: " + w + " word of " + index.size());
+				writer.println(key + " " + value);
+			});
+			writer.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -214,39 +241,41 @@ public class Indexing {
 	 * 
 	 * @throws IOException
 	 */
-	private static ObjectOpenHashSet<String> getStopwords() throws IOException {
+	private ObjectOpenHashSet<String> getStopwords() {
 		ObjectOpenHashSet<String> stopwords = new ObjectOpenHashSet<String>();
-
-		System.out.println("get list of stopwords from online....");
-		// stopwords from:
-		// https://github.com/igorbrigadir/stopwords/blob/master/en/alir3z4.txt
-		// https://drive.google.com/file/d/1GgXVQg11M2h0RMftEH_-o1HPcJgsdWSw/view
-		BufferedReader s = new BufferedReader(new FileReader("src/main/resources/stopwords"));
-		String online;
-		while ((online = s.readLine()) != null) {
-			String word = online.replaceAll("\\s+", "");
-			if (!stopwords.contains(word)) {
-				stopwords.add(word);
+		try {
+			// stopwords from:
+			// https://github.com/igorbrigadir/stopwords/blob/master/en/alir3z4.txt
+			// https://drive.google.com/file/d/1GgXVQg11M2h0RMftEH_-o1HPcJgsdWSw/view
+			BufferedReader s = new BufferedReader(new FileReader("src/main/resources/stopwords"));
+			String online;
+			while ((online = s.readLine()) != null) {
+				String word = online.replaceAll("\\s+", "");
+				if (!stopwords.contains(word)) {
+					stopwords.add(word);
+				}
 			}
-		}
-		s.close();
+			s.close();
 
-		System.out.println("get list of stopwords from frequency....");
-		// words with a really low frequency in the entire collection
-		// there are like 4.2 million of them, they must be removed :)
-		BufferedReader f = new BufferedReader(new FileReader(pathToFreqUnder15));
-		String freq;
-		while ((freq = f.readLine()) != null) {
-			String word = freq.replaceAll("\\s+", "");
-			if (!stopwords.contains(word)) {
-				stopwords.add(word);
+			// words with a really low frequency in the entire collection
+			// there are like 4.2 million of them, they must be removed :)
+			BufferedReader f = new BufferedReader(new FileReader(pathToFreqUnder15));
+
+			String freq;
+			while ((freq = f.readLine()) != null) {
+				String word = freq.replaceAll("\\s+", "");
+				if (!stopwords.contains(word)) {
+					stopwords.add(word);
+				}
 			}
-		}
-		f.close();
+			f.close();
 
-		// top two ranked words
-		stopwords.add("time");
-		stopwords.add("school");
+			// top two ranked words
+			stopwords.add("time");
+			stopwords.add("school");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 
 		return stopwords;
 	}
@@ -256,56 +285,60 @@ public class Indexing {
 	 * 
 	 * @throws IOException
 	 */
-	private static void stemWrite() throws IOException {
-		Object2ObjectOpenHashMap<String, Int2IntOpenHashMap> index = new Object2ObjectOpenHashMap<String, Int2IntOpenHashMap>();
+	private void stemWrite() {
+		try {
+			Object2ObjectOpenHashMap<String, Int2IntOpenHashMap> index = new Object2ObjectOpenHashMap<String, Int2IntOpenHashMap>();
 
-		System.out.println("stem index....");
-		PorterStemmer2 stemmer = new PorterStemmer2();
-		BufferedReader in = new BufferedReader(new FileReader(pathToUnsortedIndex));
-		int count = 1;
-		String line;
-		while ((line = in.readLine()) != null) {
-			System.out.println("stem: on word " + count + " of 467,011");
-			String[] entry = line.split("\\s+"); // entry[0] is the word and entry[1 to n-1] are the docIDs and freqs
-			count++;
-			if (entry.length > 1) {
-				String stemmed = stemmer.stem(entry[0]);
-				if (index.containsKey(stemmed)) {
-					Int2IntOpenHashMap updatedDocList = index.get(stemmed);
-					for (int i = 1; i < entry.length; i++) {
-						// doc[0] is the id and doc[1] is the freq
-						String[] doc = entry[i].replaceAll("[{}]", "").split(",");
-						if (updatedDocList.containsKey(Integer.parseInt(doc[0]))) {
-							// if doc and term combo already in index, add freqs
-							updatedDocList.replace(Integer.parseInt(doc[0]),
-									updatedDocList.get(Integer.parseInt(doc[0])) + Integer.parseInt(doc[1]));
-						} else {
-							// add doc to list
-							updatedDocList.put(Integer.parseInt(doc[0]), Integer.parseInt(doc[1]));
+			System.out.println("stem index....");
+			PorterStemmer2 stemmer = new PorterStemmer2();
+			BufferedReader in = new BufferedReader(new FileReader(pathToUnsortedIndex));
+			int count = 1;
+			String line;
+			while ((line = in.readLine()) != null) {
+				System.out.println("stem: on word " + count + " of 467,011");
+				String[] entry = line.split("\\s+"); // entry[0] is the word and entry[1 to n-1] are the docIDs and
+														// freqs
+				count++;
+				if (entry.length > 1) {
+					String stemmed = stemmer.stem(entry[0]);
+					if (index.containsKey(stemmed)) {
+						Int2IntOpenHashMap updatedDocList = index.get(stemmed);
+						for (int i = 1; i < entry.length; i++) {
+							// doc[0] is the id and doc[1] is the freq
+							String[] doc = entry[i].replaceAll("[{}]", "").split(",");
+							if (updatedDocList.containsKey(Integer.parseInt(doc[0]))) {
+								// if doc and term combo already in index, add freqs
+								updatedDocList.replace(Integer.parseInt(doc[0]),
+										updatedDocList.get(Integer.parseInt(doc[0])) + Integer.parseInt(doc[1]));
+							} else {
+								// add doc to list
+								updatedDocList.put(Integer.parseInt(doc[0]), Integer.parseInt(doc[1]));
+							}
 						}
+						index.replace(stemmed, updatedDocList);
+					} else {
+						// new word
+						Int2IntOpenHashMap docList = new Int2IntOpenHashMap(); // map of docIDs and freqs
+						for (int i = 1; i < entry.length; i++) {
+							String[] doc = entry[i].replaceAll("[{}]", "").split(",");
+							docList.put(Integer.parseInt(doc[0]), Integer.parseInt(doc[1]));
+						}
+						index.put(stemmed, docList);
 					}
-					index.replace(stemmed, updatedDocList);
-				} else {
-					// new word
-					Int2IntOpenHashMap docList = new Int2IntOpenHashMap(); // map of docIDs and freqs
-					for (int i = 1; i < entry.length; i++) {
-						String[] doc = entry[i].replaceAll("[{}]", "").split(",");
-						docList.put(Integer.parseInt(doc[0]), Integer.parseInt(doc[1]));
-					}
-					index.put(stemmed, docList);
 				}
 			}
-		}
-		in.close();
+			in.close();
 
-		System.out.println("write index of size " + index.size() + " to file....");
-		FileOutputStream fileout = new FileOutputStream(pathToSERIndex);
-		ObjectOutputStream out = new ObjectOutputStream(fileout);
-		out.writeObject(index);
-		out.close();
+			System.out.println("write index of size " + index.size() + " to file....");
+			FileOutputStream fileout = new FileOutputStream(pathToSERIndex);
+			ObjectOutputStream out = new ObjectOutputStream(fileout);
+			out.writeObject(index);
+			out.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
-	public static void main(String[] args) throws IOException {
-		buildIndex();
+	public static void main(String[] args) {
 	}
 }
