@@ -15,7 +15,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +23,12 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
+
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 // http://fastutil.di.unimi.it/
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
@@ -35,7 +39,8 @@ public class Indexing {
 	private String pathToSERIndex = "src/main/resources/index.ser";
 	private String pathToUnsortedIndex = "src/main/resources/unsorted-index.txt";
 	private String pathToFreq = "src/main/resources/freq.txt";
-	private String pathToFreqUnder15 = "src/main/resources/freqUnder15.txt";
+	private String pathToFreq49 = "src/main/resources/freq49.txt";
+	private String pathToMaxDocFreq = "src/main/resources/maxDocFreq.ser";
 
 	/**
 	 * Lower cases and removes certain characters
@@ -88,16 +93,30 @@ public class Indexing {
 	public Object2ObjectOpenHashMap<String, Int2IntOpenHashMap> getIndex() {
 		Object2ObjectOpenHashMap<String, Int2IntOpenHashMap> index = new Object2ObjectOpenHashMap<String, Int2IntOpenHashMap>();
 		try {
-			FileInputStream fileIn = new FileInputStream(pathToSERIndex);
+			Kryo kryo = new Kryo();
+			kryo.register(Object2ObjectOpenHashMap.class);
+			Input input = new Input(new FileInputStream(pathToSERIndex));
+			index = kryo.readObject(input, Object2ObjectOpenHashMap.class);
+			input.close();
+		} catch (IOException e) {
+			System.err.println(e);
+		}
+		return index;
+	}
+
+	public Int2IntOpenHashMap getMaxDocFreq() {
+		Int2IntOpenHashMap maxFreq = new Int2IntOpenHashMap();
+		try {
+			FileInputStream fileIn = new FileInputStream(pathToMaxDocFreq);
 			ObjectInputStream in = new ObjectInputStream(fileIn);
-			index = (Object2ObjectOpenHashMap<String, Int2IntOpenHashMap>) in.readObject();
+			maxFreq = (Int2IntOpenHashMap) in.readObject();
 			in.close();
 		} catch (IOException e) {
 			System.err.println(e);
 		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
 		}
-		return index;
+		return maxFreq;
 	}
 
 	/**
@@ -138,6 +157,7 @@ public class Indexing {
 			s.close();
 
 			HashMap<String, Integer> vocab = new HashMap<String, Integer>();
+			Int2IntOpenHashMap maxFreq = new Int2IntOpenHashMap();
 			Reader in = new FileReader(pathToCSV);
 			CSVParser records = CSVFormat.EXCEL.withFirstRecordAsHeader().parse(in);
 
@@ -147,24 +167,52 @@ public class Indexing {
 				content = caseAndCharacters(content);
 				String[] words = content.split("\\s+");
 
-				HashSet<String> unique = new HashSet<String>();
-				List<String> wordsAsList = Arrays.asList(words);
+				Object2IntOpenHashMap<String> unique = new Object2IntOpenHashMap<String>();
 
+				// get the frequency of the unstemmed word in the entire collection
 				for (String word : words) {
 					word = word.replaceAll("\\s+", "");
-					if (!unique.contains(word) && !stopwordsTemp.contains(word)) {
-						if (word.length() > 0) {
-							unique.add(word);
-							int freq = Collections.frequency(wordsAsList, word);
-							if (vocab.containsKey(word)) {
-								vocab.replace(word, vocab.get(word) + freq);
-							} else {
-								vocab.put(word, 1);
-							}
+					if (!stopwordsTemp.contains(word) && word.length() > 0) {
+						int freq = 1;
+						if (unique.containsKey(word)) {
+							freq += unique.getInt(word);
+							unique.replace(word, freq);
+						} else {
+							unique.put(word, freq);
+						}
+						if (vocab.containsKey(word)) {
+							vocab.replace(word, vocab.get(word) + freq);
+						} else {
+							vocab.put(word, freq);
 						}
 					}
 				}
+
+				// get max frequency of stemmed words in document (for ranking documents)
+				int max = 0;
+				Object2IntOpenHashMap<String> stemUnique = new Object2IntOpenHashMap<String>();
+				PorterStemmer2 stemmer = new PorterStemmer2();
+				for (String word : unique.keySet()) {
+					// not an additional stopword
+					if (vocab.get(word) > 31 && word.compareTo("time") == 0 && word.compareTo("school") == 0
+							&& word.compareTo("city") == 0) {
+						String stem = stemmer.stem(word);
+						if (stemUnique.containsKey(stem)) {
+							stemUnique.addTo(stem, unique.getInt(word));
+						} else {
+							stemUnique.put(stem, unique.getInt(word));
+						}
+						if (stemUnique.getInt(stem) > max) {
+							max = stemUnique.getInt(stem);
+						}
+					}
+				}
+				maxFreq.put(Integer.parseInt(record.get("id")), max);
 			}
+			FileOutputStream fileout = new FileOutputStream(pathToMaxDocFreq);
+			ObjectOutputStream out = new ObjectOutputStream(fileout);
+			out.writeObject(maxFreq);
+			out.close();
 
 			System.out.println("sort words by their frequency....");
 			List<Map.Entry<String, Integer>> list = new LinkedList<Map.Entry<String, Integer>>(vocab.entrySet());
@@ -176,15 +224,15 @@ public class Indexing {
 
 			System.out.println("print words to the two files....");
 			PrintWriter writer = new PrintWriter(new FileWriter(new File(pathToFreq)));
-			PrintWriter writerUnder15 = new PrintWriter(new FileWriter(new File(pathToFreqUnder15)));
+			PrintWriter writer49 = new PrintWriter(new FileWriter(new File(pathToFreq49)));
 			for (Map.Entry<String, Integer> entry : list) {
 				writer.println(entry.getValue() + " " + entry.getKey());
-				if (entry.getValue() < 16) {
-					writerUnder15.println(entry.getKey());
+				if (entry.getValue() < 50) {
+					writer49.println(entry.getKey());
 				}
 			}
 			writer.close();
-			writerUnder15.close();
+			writer49.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -225,9 +273,7 @@ public class Indexing {
 
 			System.out.println("write unsorted index to file....");
 			PrintWriter writer = new PrintWriter(new FileWriter(new File(pathToUnsortedIndex)));
-			int w = 1;
 			index.forEach((key, value) -> {
-				System.out.println("write unsort: " + w + " word of " + index.size());
 				writer.println(key + " " + value);
 			});
 			writer.close();
@@ -259,8 +305,7 @@ public class Indexing {
 
 			// words with a really low frequency in the entire collection
 			// there are like 4.2 million of them, they must be removed :)
-			BufferedReader f = new BufferedReader(new FileReader(pathToFreqUnder15));
-
+			BufferedReader f = new BufferedReader(new FileReader(pathToFreq49));
 			String freq;
 			while ((freq = f.readLine()) != null) {
 				String word = freq.replaceAll("\\s+", "");
@@ -270,8 +315,8 @@ public class Indexing {
 			}
 			f.close();
 
-			// top two ranked words
-			stopwords.add("time");
+			// top three ranked words
+			stopwords.add("-");
 			stopwords.add("school");
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -295,7 +340,7 @@ public class Indexing {
 			int count = 1;
 			String line;
 			while ((line = in.readLine()) != null) {
-				System.out.println("stem: on word " + count + " of 467,011");
+				System.out.println("stem: on word " + count + " of 400,135");
 				String[] entry = line.split("\\s+"); // entry[0] is the word and entry[1 to n-1] are the docIDs and
 														// freqs
 				count++;
@@ -330,6 +375,12 @@ public class Indexing {
 			in.close();
 
 			System.out.println("write index of size " + index.size() + " to file....");
+			Kryo kryo = new Kryo();
+			kryo.register(Object2ObjectOpenHashMap.class);
+			Output output = new Output(new FileOutputStream("src/main/resources/index.bin"));
+			kryo.writeObject(output, index);
+			output.close();
+			
 			FileOutputStream fileout = new FileOutputStream(pathToSERIndex);
 			ObjectOutputStream out = new ObjectOutputStream(fileout);
 			out.writeObject(index);
@@ -340,5 +391,7 @@ public class Indexing {
 	}
 
 	public static void main(String[] args) {
+		Indexing indexing = new Indexing();
+		indexing.stemWrite();
 	}
 }

@@ -103,16 +103,7 @@ public class Query {
 	
 	public void relevanceRanking() {
 		System.out.println("calculating relevance ranking....");
-		getMaxTermFreqInDoc();
-	}
-	
-	private void getMaxTermFreqInDoc() {
-		
-	}
-	
-	@SuppressWarnings("unused")
-	private void calculateMaxTermFreqInDoc() {
-		
+		Int2IntOpenHashMap maxDocFreq = indexing.getMaxDocFreq();
 	}
 
 	public static void main(String[] args) {
