@@ -1,12 +1,20 @@
 package query;
 
 import index.Indexing;
+
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.Sets;
@@ -17,14 +25,14 @@ public class Query {
 
 	private Indexing indexing;
 	private String processedQuery;
-
 	// keeps track of the number of times w appears in d
 	// also acts as a global set of candidate resources
 	private Int2ObjectOpenHashMap<Object2IntOpenHashMap<String>> docFreq = new Int2ObjectOpenHashMap<Object2IntOpenHashMap<String>>();
 	// keeps track of the number of documents in DC in which w appears at least once
-	private Object2IntOpenHashMap<String> collectFreq = new Object2IntOpenHashMap<String>();
+	private Object2IntOpenHashMap<String> collectFreq = new Object2IntOpenHashMap<String>();	
+	private IntOpenHashSet resources = new IntOpenHashSet();
+	private List<Map.Entry<Integer, Double>> top5 = new ArrayList<Map.Entry<Integer, Double>>();
 
-	
 	public Query(String q) {
 		indexing = new Indexing();
 
@@ -98,12 +106,48 @@ public class Query {
 				}
 			}
 			docFreq.put(doc, termFreq);
+			resources.add(doc);
 		}
 	}
-	
+
+	/**
+	 * Compute for each document in CR its corresponding relevance score with
+	 * respect to q. Then sort by score (highest to lowest) and keep the top 5.
+	 */
 	public void relevanceRanking() {
 		System.out.println("calculating relevance ranking....");
-		Int2IntOpenHashMap maxDocFreq = indexing.getMaxDocFreq();
+		Int2IntOpenHashMap maxDocFreq = indexing.getMaxDocFreq(resources);
+		HashMap<Integer, Double> relevanceScore = new HashMap<Integer, Double>();
+
+		for (int doc : resources) {
+			Object2IntOpenHashMap<String> freqInDoc = docFreq.get(doc);
+			double score = 0.0;
+			for (String word : collectFreq.keySet()) {
+				if (freqInDoc.containsKey(word)) {
+					if (maxDocFreq.get(doc) != 0 && collectFreq.getInt(word) != 0) {
+						double tf = (double) freqInDoc.getInt(word) / (double) maxDocFreq.get(doc);
+						double idf = (Math.log(1662756 / collectFreq.getInt(word)) / Math.log(2) + 1e-10);
+						score += (tf * idf);
+					}
+				}
+			}
+			relevanceScore.put(doc, score);
+		}
+
+		// sort from highest score to lowest
+		List<Map.Entry<Integer, Double>> list = new ArrayList<Map.Entry<Integer, Double>>(relevanceScore.entrySet());
+		Collections.sort(list, new Comparator<Map.Entry<Integer, Double>>() {
+			public int compare(Map.Entry<Integer, Double> o1, Map.Entry<Integer, Double> o2) {
+				return (o2.getValue()).compareTo(o1.getValue());
+			}
+		});
+
+		int r = 0;
+		while (r < 5 && r < list.size()) {
+			top5.add(list.get(r));
+			System.out.println("  " + (r + 1) + ". " + list.get(r).getValue());
+			r++;
+		}
 	}
 
 	public static void main(String[] args) {

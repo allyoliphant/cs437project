@@ -23,13 +23,10 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.io.Input;
-import com.esotericsoftware.kryo.io.Output;
-
-import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 // http://fastutil.di.unimi.it/
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
@@ -93,24 +90,26 @@ public class Indexing {
 	public Object2ObjectOpenHashMap<String, Int2IntOpenHashMap> getIndex() {
 		Object2ObjectOpenHashMap<String, Int2IntOpenHashMap> index = new Object2ObjectOpenHashMap<String, Int2IntOpenHashMap>();
 		try {
-			Kryo kryo = new Kryo();
-			kryo.register(Object2ObjectOpenHashMap.class);
-			Input input = new Input(new FileInputStream(pathToSERIndex));
-			index = kryo.readObject(input, Object2ObjectOpenHashMap.class);
-			input.close();
-		} catch (IOException e) {
+			FileInputStream fileIn = new FileInputStream(pathToSERIndex);
+			ObjectInputStream in = new ObjectInputStream(fileIn);
+			index = (Object2ObjectOpenHashMap<String, Int2IntOpenHashMap>) in.readObject();
+			in.close();
+		} catch (IOException | ClassNotFoundException e) {
 			System.err.println(e);
 		}
 		return index;
 	}
 
-	public Int2IntOpenHashMap getMaxDocFreq() {
+	public Int2IntOpenHashMap getMaxDocFreq(IntOpenHashSet resources) {
 		Int2IntOpenHashMap maxFreq = new Int2IntOpenHashMap();
 		try {
 			FileInputStream fileIn = new FileInputStream(pathToMaxDocFreq);
 			ObjectInputStream in = new ObjectInputStream(fileIn);
-			maxFreq = (Int2IntOpenHashMap) in.readObject();
-			in.close();
+			Int2IntOpenHashMap allMaxFreq = (Int2IntOpenHashMap) in.readObject();
+			in.close();			
+			for (int doc : resources) {
+				maxFreq.put(doc, allMaxFreq.get(doc));
+			}
 		} catch (IOException e) {
 			System.err.println(e);
 		} catch (ClassNotFoundException e) {
@@ -194,8 +193,7 @@ public class Indexing {
 				PorterStemmer2 stemmer = new PorterStemmer2();
 				for (String word : unique.keySet()) {
 					// not an additional stopword
-					if (vocab.get(word) > 31 && word.compareTo("time") == 0 && word.compareTo("school") == 0
-							&& word.compareTo("city") == 0) {
+					if (vocab.get(word) > 49 && word.compareTo("-") != 0 && word.compareTo("school") != 0) {
 						String stem = stemmer.stem(word);
 						if (stemUnique.containsKey(stem)) {
 							stemUnique.addTo(stem, unique.getInt(word));
@@ -209,6 +207,7 @@ public class Indexing {
 				}
 				maxFreq.put(Integer.parseInt(record.get("id")), max);
 			}
+			
 			FileOutputStream fileout = new FileOutputStream(pathToMaxDocFreq);
 			ObjectOutputStream out = new ObjectOutputStream(fileout);
 			out.writeObject(maxFreq);
@@ -374,13 +373,7 @@ public class Indexing {
 			}
 			in.close();
 
-			System.out.println("write index of size " + index.size() + " to file....");
-			Kryo kryo = new Kryo();
-			kryo.register(Object2ObjectOpenHashMap.class);
-			Output output = new Output(new FileOutputStream("src/main/resources/index.bin"));
-			kryo.writeObject(output, index);
-			output.close();
-			
+			System.out.println("write index of size " + index.size() + " to file....");			
 			FileOutputStream fileout = new FileOutputStream(pathToSERIndex);
 			ObjectOutputStream out = new ObjectOutputStream(fileout);
 			out.writeObject(index);
@@ -392,6 +385,6 @@ public class Indexing {
 
 	public static void main(String[] args) {
 		Indexing indexing = new Indexing();
-		indexing.stemWrite();
+		indexing.frequencies();
 	}
 }
