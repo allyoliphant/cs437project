@@ -1,495 +1,422 @@
 package index;
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 /*
+***************************************************************
+    PorterStemmer.java
+    Programmer: Rajiv Yerra
+    Last Modified: Aug 3, 2004
 
-   Porter stemmer in Java. The original paper is in
+    This class implements the PORTER stemming algorithm, which
+    is fully described in "An algorithm for suffix stripping",
+    M.F. Porter (1980), _Program_, Vol. 14, No. 3, pp. 130-137
 
-       Porter, 1980, An algorithm for suffix stripping, Program, Vol. 14,
-       no. 3, pp 130-137,
-
-   See also http://www.tartarus.org/~martin/PorterStemmer/index.html
-
-   Bug 1 (reported by Gonzalo Parra 16/10/99) fixed as marked below.
-   Tthe words 'aed', 'eed', 'oed' leave k at 'a' for step 3, and b[k-1]
-   is then out outside the bounds of b.
-
-   Similarly,
-
-   Bug 2 (reported by Steve Dyrdahl 22/2/00) fixed as marked below.
-   'ion' by itself leaves j = -1 in the test for 'ion' in step 5, and
-   b[j] is then outside the bounds of b.
-
-   Release 3.
-
-   [ This version is derived from Release 3, modified by Brian Goetz to
-     optimize for fewer object creations.  ]
-
+***************************************************************
 */
 
+public class PorterStemmer {
 
-/**
- *
- * Stemmer, implementing the Porter Stemming Algorithm
- *
- * The Stemmer class transforms a word into its root form.  The input
- * word can be provided a character at time (by calling add()), or at once
- * by calling one of the various stem(something) methods.
- */
-// CHECKSTYLE:OFF
-public class PorterStemmer implements Stemmer {
-  private char[] b;
-  private int i,    /* offset into b */
-    j, k, k0;
-  private boolean dirty = false;
-  private static final int INC = 50;
+    public String stem(String str) {
+        // check for zero length
+        if (str.length() > 0) {
+            // all characters must be letters
+            char[] c = str.toCharArray();
+            for (int i = 0; i < c.length; i++) {
+                if (!Character.isLetter(c[i]))
+                    return "Invalid term";
+            }
+        } else {
+            return "No term entered";
+        }
+        str = step1a(str);
+        str = step1b(str);
+        str = step1c(str);
+        str = step2(str);
+        str = step3(str);
+        str = step4(str);
+        str = step5a(str);
+        str = step5b(str);
+        return str;
+    } // end stem
 
-  public PorterStemmer() {
-    b = new char[INC];
-    i = 0;
-  }
+    protected String step1a (String str) {
+        // SSES -> SS
+        if (str.endsWith("sses")) {
+            return str.substring(0, str.length() - 2);
+        // IES -> I
+        } else if (str.endsWith("ies")) {
+            return str.substring(0, str.length() - 2);
+        // SS -> S
+        } else if (str.endsWith("ss")) {
+            return str;
+        // S ->
+        } else if (str.endsWith("s")) {
+            return str.substring(0, str.length() - 1);
+        } else {
+            return str;
+        }
+    } // end step1a
 
-  /**
-   * reset() resets the stemmer so it can stem another word.  If you invoke
-   * the stemmer by calling add(char) and then stem(), you must call reset()
-   * before starting another word.
-   */
-  public void reset() { i = 0; dirty = false; }
+    protected String step1b (String str) {
+        // (m > 0) EED -> EE
+        if (str.endsWith("eed")) {
+            if (stringMeasure(str.substring(0, str.length() - 3)) > 0)
+                return str.substring(0, str.length() - 1);
+            else
+                return str;
+        // (*v*) ED ->
+        } else if ((str.endsWith("ed")) &&
+                   (containsVowel(str.substring(0, str.length() - 2)))) {
+            return step1b2(str.substring(0, str.length() - 2));
+        // (*v*) ING ->
+        } else if ((str.endsWith("ing")) &&
+                   (containsVowel(str.substring(0, str.length() - 3)))) {
+            return step1b2(str.substring(0, str.length() - 3));
+        } // end if
+        return str;
+    } // end step1b
 
-  /**
-   * Add a character to the word being stemmed.  When you are finished
-   * adding characters, you can call stem(void) to process the word.
-   */
-  public void add(char ch) {
-    if (b.length == i) {
+    protected String step1b2 (String str) {
+        // AT -> ATE
+        if (str.endsWith("at") ||
+            str.endsWith("bl") ||
+            str.endsWith("iz")) {
+            return str + "e";
+        } else if ((endsWithDoubleConsonent(str)) &&
+                   (!(str.endsWith("l") || str.endsWith("s") || str.endsWith("z")))) {
+            return str.substring(0, str.length() - 1);
+        } else if ((stringMeasure(str) == 1) &&
+                   (endsWithCVC(str))) {
+            return str + "e";
+        } else {
+            return str;
+        }
+    } // end step1b2
 
-      char[] new_b = new char[i+INC];
-      System.arraycopy(b, 0, new_b, 0, i);
-      {
-        b = new_b;
-      }
-    }
-    b[i++] = ch;
-  }
+    protected String step1c(String str) {
+        // (*v*) Y -> I
+        if (str.endsWith("y")) {
+            if (containsVowel(str.substring(0, str.length() - 1)))
+                return str.substring(0, str.length() - 1) + "i";
+        } // end if
+        return str;
+    } // end step1c
 
-  /**
-   * After a word has been stemmed, it can be retrieved by toString(),
-   * or a reference to the internal buffer can be retrieved by getResultBuffer
-   * and getResultLength (which is generally more efficient.)
-   */
-  @Override
-  public String toString() { return new String(b,0,i); }
+    protected String step2 (String str) {
+        // (m > 0) ATIONAL -> ATE
+        if ((str.endsWith("ational")) &&
+            (stringMeasure(str.substring(0, str.length() - 5)) > 0)) {
+            return str.substring(0, str.length() - 5) + "e";
+        // (m > 0) TIONAL -> TION
+        } else if ((str.endsWith("tional")) &&
+            (stringMeasure(str.substring(0, str.length() - 2)) > 0)) {
+            return str.substring(0, str.length() - 2);
+        // (m > 0) ENCI -> ENCE
+        } else if ((str.endsWith("enci")) &&
+            (stringMeasure(str.substring(0, str.length() - 2)) > 0)) {
+            return str.substring(0, str.length() - 2);
+        // (m > 0) ANCI -> ANCE
+        } else if ((str.endsWith("anci")) &&
+            (stringMeasure(str.substring(0, str.length() - 1)) > 0)) {
+            return str.substring(0, str.length() - 1) + "e";
+        // (m > 0) IZER -> IZE
+        } else if ((str.endsWith("izer")) &&
+            (stringMeasure(str.substring(0, str.length() - 1)) > 0)) {
+            return str.substring(0, str.length() - 1);
+        // (m > 0) ABLI -> ABLE
+        } else if ((str.endsWith("abli")) &&
+            (stringMeasure(str.substring(0, str.length() - 1)) > 0)) {
+            return str.substring(0, str.length() - 1) + "e";
+        // (m > 0) ENTLI -> ENT
+        } else if ((str.endsWith("alli")) &&
+            (stringMeasure(str.substring(0, str.length() - 2)) > 0)) {
+            return str.substring(0, str.length() - 2);
+        // (m > 0) ELI -> E
+        } else if ((str.endsWith("entli")) &&
+            (stringMeasure(str.substring(0, str.length() - 2)) > 0)) {
+            return str.substring(0, str.length() - 2);
+        // (m > 0) OUSLI -> OUS
+        } else if ((str.endsWith("eli")) &&
+            (stringMeasure(str.substring(0, str.length() - 2)) > 0)) {
+            return str.substring(0, str.length() - 2);
+        // (m > 0) IZATION -> IZE
+        } else if ((str.endsWith("ousli")) &&
+            (stringMeasure(str.substring(0, str.length() - 2)) > 0)) {
+            return str.substring(0, str.length() - 2);
+        // (m > 0) IZATION -> IZE
+        } else if ((str.endsWith("ization")) &&
+            (stringMeasure(str.substring(0, str.length() - 5)) > 0)) {
+            return str.substring(0, str.length() - 5) + "e";
+        // (m > 0) ATION -> ATE
+        } else if ((str.endsWith("ation")) &&
+            (stringMeasure(str.substring(0, str.length() - 3)) > 0)) {
+            return str.substring(0, str.length() - 3) + "e";
+        // (m > 0) ATOR -> ATE
+        } else if ((str.endsWith("ator")) &&
+            (stringMeasure(str.substring(0, str.length() - 2)) > 0)) {
+            return str.substring(0, str.length() - 2) + "e";
+        // (m > 0) ALISM -> AL
+        } else if ((str.endsWith("alism")) &&
+            (stringMeasure(str.substring(0, str.length() - 3)) > 0)) {
+           return str.substring(0, str.length() - 3);
+        // (m > 0) IVENESS -> IVE
+        } else if ((str.endsWith("iveness")) &&
+            (stringMeasure(str.substring(0, str.length() - 4)) > 0)) {
+            return str.substring(0, str.length() - 4);
+        // (m > 0) FULNESS -> FUL
+        } else if ((str.endsWith("fulness")) &&
+            (stringMeasure(str.substring(0, str.length() - 4)) > 0)) {
+            return str.substring(0, str.length() - 4);
+        // (m > 0) OUSNESS -> OUS
+        } else if ((str.endsWith("ousness")) &&
+            (stringMeasure(str.substring(0, str.length() - 4)) > 0)) {
+            return str.substring(0, str.length() - 4);
+        // (m > 0) ALITII -> AL
+        } else if ((str.endsWith("aliti")) &&
+            (stringMeasure(str.substring(0, str.length() - 3)) > 0)) {
+            return str.substring(0, str.length() - 3);
+        // (m > 0) IVITI -> IVE
+        } else if ((str.endsWith("iviti")) &&
+            (stringMeasure(str.substring(0, str.length() - 3)) > 0)) {
+            return str.substring(0, str.length() - 3) + "e";
+        // (m > 0) BILITI -> BLE
+        } else if ((str.endsWith("biliti")) &&
+            (stringMeasure(str.substring(0, str.length() - 5)) > 0)) {
+            return str.substring(0, str.length() - 5) + "le";
+        } // end if
+        return str;
+    } // end step2
 
-  /**
-   * Returns the length of the word resulting from the stemming process.
-   */
-  public int getResultLength() { return i; }
 
-  /**
-   * Returns a reference to a character buffer containing the results of
-   * the stemming process.  You also need to consult getResultLength()
-   * to determine the length of the result.
-   */
-  public char[] getResultBuffer() { return b; }
+    protected String step3 (String str) {
+        // (m > 0) ICATE -> IC
+        if ((str.endsWith("icate")) &&
+            (stringMeasure(str.substring(0, str.length() - 3)) > 0)) {
+            return str.substring(0, str.length() - 3);
+        // (m > 0) ATIVE ->
+        } else if ((str.endsWith("ative")) &&
+            (stringMeasure(str.substring(0, str.length() - 5)) > 0)) {
+            return str.substring(0, str.length() - 5);
+        // (m > 0) ALIZE -> AL
+        } else if ((str.endsWith("alize")) &&
+            (stringMeasure(str.substring(0, str.length() - 3)) > 0)) {
+            return str.substring(0, str.length() - 3);
+        // (m > 0) ICITI -> IC
+        } else if ((str.endsWith("iciti")) &&
+            (stringMeasure(str.substring(0, str.length() - 3)) > 0)) {
+            return str.substring(0, str.length() - 3);
+        // (m > 0) ICAL -> IC
+        } else if ((str.endsWith("ical")) &&
+            (stringMeasure(str.substring(0, str.length() - 2)) > 0)) {
+            return str.substring(0, str.length() - 2);
+        // (m > 0) FUL ->
+        } else if ((str.endsWith("ful")) &&
+            (stringMeasure(str.substring(0, str.length() - 3)) > 0)) {
+            return str.substring(0, str.length() - 3);
+        // (m > 0) NESS ->
+        } else if ((str.endsWith("ness")) &&
+            (stringMeasure(str.substring(0, str.length() - 4)) > 0)) {
+            return str.substring(0, str.length() - 4);
+        } // end if
+        return str;
+    } // end step3
 
-  /* cons(i) is true <=> b[i] is a consonant. */
 
-  private boolean cons(int i) {
-    switch (b[i]) {
-    case 'a': case 'e': case 'i': case 'o': case 'u':
-      return false;
-    case 'y':
-      return (i == k0) || !cons(i - 1);
-    default:
-      return true;
-    }
-  }
+    protected String step4 (String str) {
+        if ((str.endsWith("al")) &&
+            (stringMeasure(str.substring(0, str.length() - 2)) > 1)) {
+            return str.substring(0, str.length() - 2);
+            // (m > 1) ANCE ->
+        } else if ((str.endsWith("ance")) &&
+            (stringMeasure(str.substring(0, str.length() - 4)) > 1)) {
+            return str.substring(0, str.length() - 4);
+        // (m > 1) ENCE ->
+        } else if ((str.endsWith("ence")) &&
+            (stringMeasure(str.substring(0, str.length() - 4)) > 1)) {
+            return str.substring(0, str.length() - 4);
+        // (m > 1) ER ->
+        } else if ((str.endsWith("er")) &&
+            (stringMeasure(str.substring(0, str.length() - 2)) > 1)) {
+            return str.substring(0, str.length() - 2);
+        // (m > 1) IC ->
+        } else if ((str.endsWith("ic")) &&
+            (stringMeasure(str.substring(0, str.length() - 2)) > 1)) {
+            return str.substring(0, str.length() - 2);
+        // (m > 1) ABLE ->
+        } else if ((str.endsWith("able")) &&
+            (stringMeasure(str.substring(0, str.length() - 4)) > 1)) {
+            return str.substring(0, str.length() - 4);
+        // (m > 1) IBLE ->
+        } else if ((str.endsWith("ible")) &&
+            (stringMeasure(str.substring(0, str.length() - 4)) > 1)) {
+            return str.substring(0, str.length() - 4);
+        // (m > 1) ANT ->
+        } else if ((str.endsWith("ant")) &&
+            (stringMeasure(str.substring(0, str.length() - 3)) > 1)) {
+            return str.substring(0, str.length() - 3);
+        // (m > 1) EMENT ->
+        } else if ((str.endsWith("ement")) &&
+            (stringMeasure(str.substring(0, str.length() - 5)) > 1)) {
+            return str.substring(0, str.length() - 5);
+        // (m > 1) MENT ->
+        } else if ((str.endsWith("ment")) &&
+            (stringMeasure(str.substring(0, str.length() - 4)) > 1)) {
+            return str.substring(0, str.length() - 4);
+        // (m > 1) ENT ->
+        } else if ((str.endsWith("ent")) &&
+            (stringMeasure(str.substring(0, str.length() - 3)) > 1)) {
+            return str.substring(0, str.length() - 3);
+        // (m > 1) and (*S or *T) ION ->
+        } else if ((str.endsWith("sion") || str.endsWith("tion")) &&
+            (stringMeasure(str.substring(0, str.length() - 3)) > 1)) {
+            return str.substring(0, str.length() - 3);
+        // (m > 1) OU ->
+        } else if ((str.endsWith("ou")) &&
+            (stringMeasure(str.substring(0, str.length() - 2)) > 1)) {
+            return str.substring(0, str.length() - 2);
+        // (m > 1) ISM ->
+        } else if ((str.endsWith("ism")) &&
+            (stringMeasure(str.substring(0, str.length() - 3)) > 1)) {
+            return str.substring(0, str.length() - 3);
+        // (m > 1) ATE ->
+        } else if ((str.endsWith("ate")) &&
+            (stringMeasure(str.substring(0, str.length() - 3)) > 1)) {
+            return str.substring(0, str.length() - 3);
+        // (m > 1) ITI ->
+        } else if ((str.endsWith("iti")) &&
+            (stringMeasure(str.substring(0, str.length() - 3)) > 1)) {
+            return str.substring(0, str.length() - 3);
+        // (m > 1) OUS ->
+        } else if ((str.endsWith("ous")) &&
+            (stringMeasure(str.substring(0, str.length() - 3)) > 1)) {
+            return str.substring(0, str.length() - 3);
+        // (m > 1) IVE ->
+        } else if ((str.endsWith("ive")) &&
+            (stringMeasure(str.substring(0, str.length() - 3)) > 1)) {
+            return str.substring(0, str.length() - 3);
+        // (m > 1) IZE ->
+        } else if ((str.endsWith("ize")) &&
+            (stringMeasure(str.substring(0, str.length() - 3)) > 1)) {
+            return str.substring(0, str.length() - 3);
+        } // end if
+        return str;
+    } // end step4
 
-  /* m() measures the number of consonant sequences between k0 and j. if c is
-     a consonant sequence and v a vowel sequence, and <..> indicates arbitrary
-     presence,
 
-          <c><v>       gives 0
-          <c>vc<v>     gives 1
-          <c>vcvc<v>   gives 2
-          <c>vcvcvc<v> gives 3
-          ....
-  */
+    protected String step5a (String str) {
+        // (m > 1) E ->
+        if ((stringMeasure(str.substring(0, str.length() - 1)) > 1) &&
+            str.endsWith("e"))
+            return str.substring(0, str.length() -1);
+        // (m = 1 and not *0) E ->
+        else if ((stringMeasure(str.substring(0, str.length() - 1)) == 1) &&
+                 (!endsWithCVC(str.substring(0, str.length() - 1))) &&
+                 (str.endsWith("e")))
+            return str.substring(0, str.length() - 1);
+        else
+            return str;
+    } // end step5a
 
-  private int m() {
-    int n = 0;
-    int i = k0;
-    while(true) {
-      if (i > j)
-        return n;
-      if (! cons(i))
-        break;
-      i++;
-    }
-    i++;
-    while(true) {
-      while(true) {
-        if (i > j)
-          return n;
-        if (cons(i))
-          break;
-        i++;
-      }
-      i++;
-      n++;
-      while(true) {
-        if (i > j)
-          return n;
-        if (! cons(i))
-          break;
-        i++;
-      }
-      i++;
-    }
-  }
 
-  /* vowelinstem() is true <=> k0,...j contains a vowel */
+    protected String step5b (String str) {
+        // (m > 1 and *d and *L) ->
+        if (str.endsWith("l") &&
+            endsWithDoubleConsonent(str) &&
+            (stringMeasure(str.substring(0, str.length() - 1)) > 1)) {
+            return str.substring(0, str.length() - 1);
+        } else {
+            return str;
+        }
+    } // end step5b
 
-  private boolean vowelinstem() {
-    int i;
-    for (i = k0; i <= j; i++)
-      if (! cons(i))
-        return true;
-    return false;
-  }
 
-  /* doublec(j) is true <=> j,(j-1) contain a double consonant. */
+    /*
+       -------------------------------------------------------
+       The following are functions to help compute steps 1 - 5
+       -------------------------------------------------------
+    */
 
-  private boolean doublec(int j) {
-    return j >= k0 + 1 && b[j] == b[j - 1] && cons(j);
-  }
+    // does string end with 's'?
+    protected boolean endsWithS(String str) {
+        return str.endsWith("s");
+    } // end function
 
-  /* cvc(i) is true <=> i-2,i-1,i has the form consonant - vowel - consonant
-     and also if the second c is not w,x or y. this is used when trying to
-     restore an e at the end of a short word. e.g.
+    // does string contain a vowel?
+    protected boolean containsVowel(String str) {
+        char[] strchars = str.toCharArray();
+        for (int i = 0; i < strchars.length; i++) {
+            if (isVowel(strchars[i]))
+                return true;
+        }
+        // no aeiou but there is y
+        if (str.indexOf('y') > -1)
+            return true;
+        else
+            return false;
+    } // end function
 
-          cav(e), lov(e), hop(e), crim(e), but
-          snow, box, tray.
+    // is char a vowel?
+    public boolean isVowel(char c) {
+        if ((c == 'a') ||
+            (c == 'e') ||
+            (c == 'i') ||
+            (c == 'o') ||
+            (c == 'u'))
+            return true;
+        else
+            return false;
+    } // end function
 
-  */
-
-  private boolean cvc(int i) {
-    if (i < k0+2 || !cons(i) || cons(i-1) || !cons(i-2))
-      return false;
-    else {
-      int ch = b[i];
-      if (ch == 'w' || ch == 'x' || ch == 'y') return false;
-    }
-    return true;
-  }
-
-  private boolean ends(String s) {
-    int l = s.length();
-    int o = k-l+1;
-    if (o < k0)
-      return false;
-    for (int i = 0; i < l; i++)
-      if (b[o+i] != s.charAt(i))
+    // does string end with a double consonent?
+    protected boolean endsWithDoubleConsonent(String str) {
+    	if(str.length()>1){
+    	
+	        char c = str.charAt(str.length() - 1);
+	        if (c == str.charAt(str.length() - 2))
+	            if (!containsVowel(str.substring(str.length() - 2))) {
+	                return true;
+	        }
+    	} 
         return false;
-    j = k-l;
-    return true;
-  }
+    } // end function
 
-  /* setto(s) sets (j+1),...k to the characters in the string s, readjusting
-     k. */
+    // returns a CVC measure for the string
+    protected int stringMeasure(String str) {
+        int count = 0;
+        boolean vowelSeen = false;
+        char[] strchars = str.toCharArray();
 
-  void setto(String s) {
-    int l = s.length();
-    int o = j+1;
-    for (int i = 0; i < l; i++)
-      b[o+i] = s.charAt(i);
-    k = j+l;
-    dirty = true;
-  }
+        for (int i = 0; i < strchars.length; i++) {
+            if (isVowel(strchars[i])) {
+                vowelSeen = true;
+            } else if (vowelSeen) {
+                count++;
+                vowelSeen = false;
+            }
+        } // end for
+        return count;
+    } // end function
 
-  /* r(s) is used further down. */
+    // does stem end with CVC?
+    protected boolean endsWithCVC (String str) {
+        char c, v, c2 = ' ';
+        if (str.length() >= 3) {
+            c = str.charAt(str.length() - 1);
+            v = str.charAt(str.length() - 2);
+            c2 = str.charAt(str.length() - 3);
+        } else {
+            return false;
+        }
 
-  void r(String s) { if (m() > 0) setto(s); }
-
-  /* step1() gets rid of plurals and -ed or -ing. e.g.
-
-           caresses  ->  caress
-           ponies    ->  poni
-           ties      ->  ti
-           caress    ->  caress
-           cats      ->  cat
-
-           feed      ->  feed
-           agreed    ->  agree
-           disabled  ->  disable
-
-           matting   ->  mat
-           mating    ->  mate
-           meeting   ->  meet
-           milling   ->  mill
-           messing   ->  mess
-
-           meetings  ->  meet
-
-  */
-
-  private void step1() {
-    if (b[k] == 's') {
-      if (ends("sses")) k -= 2;
-      else if (ends("ies")) setto("i");
-      else if (b[k-1] != 's') k--;
-    }
-    if (ends("eed")) {
-      if (m() > 0)
-        k--;
-    }
-    else if ((ends("ed") || ends("ing")) && vowelinstem()) {
-      k = j;
-      if (ends("at")) setto("ate");
-      else if (ends("bl")) setto("ble");
-      else if (ends("iz")) setto("ize");
-      else if (doublec(k)) {
-        int ch = b[k--];
-        if (ch == 'l' || ch == 's' || ch == 'z')
-          k++;
-      }
-      else if (m() == 1 && cvc(k))
-        setto("e");
-    }
-  }
-
-  /* step2() turns terminal y to i when there is another vowel in the stem. */
-
-  private void step2() {
-    if (ends("y") && vowelinstem()) {
-      b[k] = 'i';
-      dirty = true;
-    }
-  }
-
-  /* step3() maps double suffices to single ones. so -ization ( = -ize plus
-     -ation) maps to -ize etc. note that the string before the suffix must give
-     m() > 0. */
-
-  private void step3() {
-    if (k == k0) return; /* For Bug 1 */
-    switch (b[k-1]) {
-    case 'a':
-      if (ends("ational")) { r("ate"); break; }
-      if (ends("tional")) { r("tion"); break; }
-      break;
-    case 'c':
-      if (ends("enci")) { r("ence"); break; }
-      if (ends("anci")) { r("ance"); break; }
-      break;
-    case 'e':
-      if (ends("izer")) { r("ize"); break; }
-      break;
-    case 'l':
-      if (ends("bli")) { r("ble"); break; }
-      if (ends("alli")) { r("al"); break; }
-      if (ends("entli")) { r("ent"); break; }
-      if (ends("eli")) { r("e"); break; }
-      if (ends("ousli")) { r("ous"); break; }
-      break;
-    case 'o':
-      if (ends("ization")) { r("ize"); break; }
-      if (ends("ation")) { r("ate"); break; }
-      if (ends("ator")) { r("ate"); break; }
-      break;
-    case 's':
-      if (ends("alism")) { r("al"); break; }
-      if (ends("iveness")) { r("ive"); break; }
-      if (ends("fulness")) { r("ful"); break; }
-      if (ends("ousness")) { r("ous"); break; }
-      break;
-    case 't':
-      if (ends("aliti")) { r("al"); break; }
-      if (ends("iviti")) { r("ive"); break; }
-      if (ends("biliti")) { r("ble"); break; }
-      break;
-    case 'g':
-      if (ends("logi")) { r("log"); break; }
-    }
-  }
-
-  /* step4() deals with -ic-, -full, -ness etc. similar strategy to step3. */
-
-  private void step4() {
-    switch (b[k]) {
-    case 'e':
-      if (ends("icate")) { r("ic"); break; }
-      if (ends("ative")) { r(""); break; }
-      if (ends("alize")) { r("al"); break; }
-      break;
-    case 'i':
-      if (ends("iciti")) { r("ic"); break; }
-      break;
-    case 'l':
-      if (ends("ical")) { r("ic"); break; }
-      if (ends("ful")) { r(""); break; }
-      break;
-    case 's':
-      if (ends("ness")) { r(""); break; }
-      break;
-    }
-  }
-
-  /* step5() takes off -ant, -ence etc., in context <c>vcvc<v>. */
-
-  private void step5() {
-    if (k == k0) return; /* for Bug 1 */
-    switch (b[k-1]) {
-    case 'a':
-      if (ends("al")) break;
-      return;
-    case 'c':
-      if (ends("ance")) break;
-      if (ends("ence")) break;
-      return;
-    case 'e':
-      if (ends("er")) break; return;
-    case 'i':
-      if (ends("ic")) break; return;
-    case 'l':
-      if (ends("able")) break;
-      if (ends("ible")) break; return;
-    case 'n':
-      if (ends("ant")) break;
-      if (ends("ement")) break;
-      if (ends("ment")) break;
-      /* element etc. not stripped before the m */
-      if (ends("ent")) break;
-      return;
-    case 'o':
-      if (ends("ion") && j >= 0 && (b[j] == 's' || b[j] == 't')) break;
-      /* j >= 0 fixes Bug 2 */
-      if (ends("ou")) break;
-      return;
-      /* takes care of -ous */
-    case 's':
-      if (ends("ism")) break;
-      return;
-    case 't':
-      if (ends("ate")) break;
-      if (ends("iti")) break;
-      return;
-    case 'u':
-      if (ends("ous")) break;
-      return;
-    case 'v':
-      if (ends("ive")) break;
-      return;
-    case 'z':
-      if (ends("ize")) break;
-      return;
-    default:
-      return;
-    }
-    if (m() > 1)
-      k = j;
-  }
-
-  /* step6() removes a final -e if m() > 1. */
-
-  private void step6() {
-    j = k;
-    if (b[k] == 'e') {
-      int a = m();
-      if (a > 1 || a == 1 && !cvc(k-1))
-        k--;
-    }
-    if (b[k] == 'l' && doublec(k) && m() > 1)
-      k--;
-  }
-
-
-  /**
-   * Stem a word provided as a String.  Returns the result as a String.
-   */
-  public String stem(String s) {
-    if (stem(s.toCharArray(), s.length()))
-      return toString();
-    else
-      return s;
-  }
-
-  /**
-   * Stem a word provided as a CharSequence.
-   * Returns the result as a CharSequence.
-   */
-  public CharSequence stem(CharSequence word) {
-    return stem(word.toString());
-  }
-
-  /** Stem a word contained in a char[].  Returns true if the stemming process
-   * resulted in a word different from the input.  You can retrieve the
-   * result with getResultLength()/getResultBuffer() or toString().
-   */
-  public boolean stem(char[] word) {
-    return stem(word, word.length);
-  }
-
-  /** Stem a word contained in a portion of a char[] array.  Returns
-   * true if the stemming process resulted in a word different from
-   * the input.  You can retrieve the result with
-   * getResultLength()/getResultBuffer() or toString().
-   */
-  public boolean stem(char[] wordBuffer, int offset, int wordLen) {
-    reset();
-    if (b.length < wordLen) {
-      b = new char[wordLen - offset];
-    }
-    System.arraycopy(wordBuffer, offset, b, 0, wordLen);
-    i = wordLen;
-    return stem(0);
-  }
-
-  /** Stem a word contained in a leading portion of a char[] array.
-   * Returns true if the stemming process resulted in a word different
-   * from the input.  You can retrieve the result with
-   * getResultLength()/getResultBuffer() or toString().
-   */
-  public boolean stem(char[] word, int wordLen) {
-    return stem(word, 0, wordLen);
-  }
-
-  /** Stem the word placed into the Stemmer buffer through calls to add().
-   * Returns true if the stemming process resulted in a word different
-   * from the input.  You can retrieve the result with
-   * getResultLength()/getResultBuffer() or toString().
-   */
-  public boolean stem() {
-    return stem(0);
-  }
-
-  public boolean stem(int i0) {
-    k = i - 1;
-    k0 = i0;
-    if (k > k0+1) {
-      step1(); step2(); step3(); step4(); step5(); step6();
-    }
-    // Also, a word is considered dirty if we lopped off letters
-    // Thanks to Ifigenia Vairelles for pointing this out.
-    if (i != k+1)
-      dirty = true;
-    i = k+1;
-    return dirty;
-  }
-}
-
+        if ((c == 'w') || (c == 'x') || (c == 'y')) {
+            return false;
+        } else if (isVowel(c)) {
+            return false;
+        } else if (!isVowel(v)) {
+            return false;
+        } else if (isVowel(c2)) {
+            return false;
+        } else {
+            return true;
+        }
+    } // end function
+} // end class

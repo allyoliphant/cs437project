@@ -74,7 +74,28 @@ public class Indexing {
 		ObjectOpenHashSet<String> stopwords = getStopwords();
 
 		// stemmer from https://opennlp.apache.org/ - apache openNLP 1.9.1
-		PorterStemmer2 stemmer = new PorterStemmer2();
+		PorterStemmer stemmer = new PorterStemmer();
+		String[] tokens = line.split("\\s+");
+		String result = "";
+		for (String token : tokens) {
+			// if token isn't a stopword, stem it and add to result
+			if (!stopwords.contains(token)) {
+				result += " " + stemmer.stem(token);
+			}
+		}
+		return result;
+	}
+
+	/**
+	 * Remove stopwords and stem remaining words
+	 * 
+	 * @param line to have stopwords removed and remaining words stemmed
+	 * @return line after stopwords removed and remaining words stemmed
+	 * @throws IOException
+	 */
+	public String stopAndStem(String line, ObjectOpenHashSet<String> stopwords) {
+		// stemmer from https://opennlp.apache.org/ - apache openNLP 1.9.1
+		PorterStemmer stemmer = new PorterStemmer();
 		String[] tokens = line.split("\\s+");
 		String result = "";
 		for (String token : tokens) {
@@ -106,7 +127,7 @@ public class Indexing {
 			FileInputStream fileIn = new FileInputStream(pathToMaxDocFreq);
 			ObjectInputStream in = new ObjectInputStream(fileIn);
 			Int2IntOpenHashMap allMaxFreq = (Int2IntOpenHashMap) in.readObject();
-			in.close();			
+			in.close();
 			for (int doc : resources) {
 				maxFreq.put(doc, allMaxFreq.get(doc));
 			}
@@ -190,7 +211,7 @@ public class Indexing {
 				// get max frequency of stemmed words in document (for ranking documents)
 				int max = 0;
 				Object2IntOpenHashMap<String> stemUnique = new Object2IntOpenHashMap<String>();
-				PorterStemmer2 stemmer = new PorterStemmer2();
+				PorterStemmer stemmer = new PorterStemmer();
 				for (String word : unique.keySet()) {
 					// not an additional stopword
 					if (vocab.get(word) > 49 && word.compareTo("-") != 0 && word.compareTo("school") != 0) {
@@ -207,7 +228,7 @@ public class Indexing {
 				}
 				maxFreq.put(Integer.parseInt(record.get("id")), max);
 			}
-			
+
 			FileOutputStream fileout = new FileOutputStream(pathToMaxDocFreq);
 			ObjectOutputStream out = new ObjectOutputStream(fileout);
 			out.writeObject(maxFreq);
@@ -286,7 +307,7 @@ public class Indexing {
 	 * 
 	 * @throws IOException
 	 */
-	private ObjectOpenHashSet<String> getStopwords() {
+	public ObjectOpenHashSet<String> getStopwords() {
 		ObjectOpenHashSet<String> stopwords = new ObjectOpenHashSet<String>();
 		try {
 			// stopwords from:
@@ -334,7 +355,7 @@ public class Indexing {
 			Object2ObjectOpenHashMap<String, Int2IntOpenHashMap> index = new Object2ObjectOpenHashMap<String, Int2IntOpenHashMap>();
 
 			System.out.println("stem index....");
-			PorterStemmer2 stemmer = new PorterStemmer2();
+			PorterStemmer stemmer = new PorterStemmer();
 			BufferedReader in = new BufferedReader(new FileReader(pathToUnsortedIndex));
 			int count = 1;
 			String line;
@@ -373,7 +394,7 @@ public class Indexing {
 			}
 			in.close();
 
-			System.out.println("write index of size " + index.size() + " to file....");			
+			System.out.println("write index of size " + index.size() + " to file....");
 			FileOutputStream fileout = new FileOutputStream(pathToSERIndex);
 			ObjectOutputStream out = new ObjectOutputStream(fileout);
 			out.writeObject(index);
@@ -384,7 +405,5 @@ public class Indexing {
 	}
 
 	public static void main(String[] args) {
-		Indexing indexing = new Indexing();
-		indexing.frequencies();
 	}
 }
