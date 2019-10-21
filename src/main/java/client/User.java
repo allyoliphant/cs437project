@@ -1,11 +1,18 @@
 package client;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import query.Query;
+
 public class User {
 	
 	private String completedQuery;
+	private Query q;
+	
+	private List<String[]> results;
 
 	public User() {
-		setCompletedQuery("");
 	}
 
 	public void setCompletedQuery(String q) {
@@ -21,7 +28,8 @@ public class User {
 		// calls method in Suggestions class
 	}
 	
-	public void getResults(String query) {
-		// calls method in Query class
+	public ArrayList<String[]> getResults() {
+		q = new Query(completedQuery);
+		return q.getResults();		
 	}
 }

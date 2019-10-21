@@ -32,12 +32,13 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
 public class Indexing {
 
-	private String pathToCSV = "src/main/resources/collection/wikipedia_text_files.csv";
-	private String pathToSERIndex = "src/main/resources/index.ser";
-	private String pathToUnsortedIndex = "src/main/resources/unsorted-index.txt";
-	private String pathToFreq = "src/main/resources/freq.txt";
-	private String pathToFreq49 = "src/main/resources/freq49.txt";
-	private String pathToMaxDocFreq = "src/main/resources/maxDocFreq.ser";
+	private String pathToCSV = "C:/Users/candy/Documents/2019-Fall/CS 437/eclipse/irproject/src/main/resources/collection/wikipedia_text_files.csv";
+	private String pathToSERIndex = "C:/Users/candy/Documents/2019-Fall/CS 437/eclipse/irproject/src/main/resources/index.ser";
+	private String pathToUnsortedIndex = "C:/Users/candy/Documents/2019-Fall/CS 437/eclipse/irproject/src/main/resources/unsorted-index.txt";
+	private String pathToFreq = "C:/Users/candy/Documents/2019-Fall/CS 437/eclipse/irproject/src/main/resources/freq.txt";
+	private String pathToFreq49 = "C:/Users/candy/Documents/2019-Fall/CS 437/eclipse/irproject/src/main/resources/freq49.txt";
+	private String pathToMaxDocFreq = "C:/Users/candy/Documents/2019-Fall/CS 437/eclipse/irproject/src/main/resources/maxDocFreq.ser";
+	private String pathToStopwords = "C:/Users/candy/Documents/2019-Fall/CS 437/eclipse/irproject/src/main/resources/stopwords";
 
 	/**
 	 * Lower cases and removes certain characters
@@ -72,8 +73,6 @@ public class Indexing {
 	 */
 	public String stopAndStem(String line) {
 		ObjectOpenHashSet<String> stopwords = getStopwords();
-
-		// stemmer from https://opennlp.apache.org/ - apache openNLP 1.9.1
 		PorterStemmer stemmer = new PorterStemmer();
 		String[] tokens = line.split("\\s+");
 		String result = "";
@@ -94,7 +93,6 @@ public class Indexing {
 	 * @throws IOException
 	 */
 	public String stopAndStem(String line, ObjectOpenHashSet<String> stopwords) {
-		// stemmer from https://opennlp.apache.org/ - apache openNLP 1.9.1
 		PorterStemmer stemmer = new PorterStemmer();
 		String[] tokens = line.split("\\s+");
 		String result = "";
@@ -166,7 +164,7 @@ public class Indexing {
 			// https://github.com/igorbrigadir/stopwords/blob/master/en/alir3z4.txt
 			// https://drive.google.com/file/d/1GgXVQg11M2h0RMftEH_-o1HPcJgsdWSw/view
 			ObjectOpenHashSet<String> stopwordsTemp = new ObjectOpenHashSet<String>();
-			BufferedReader s = new BufferedReader(new FileReader("src/main/resources/stopwords"));
+			BufferedReader s = new BufferedReader(new FileReader(pathToStopwords));
 			String line;
 			while ((line = s.readLine()) != null) {
 				String word = line.replaceAll("\\s+", "");
@@ -313,7 +311,7 @@ public class Indexing {
 			// stopwords from:
 			// https://github.com/igorbrigadir/stopwords/blob/master/en/alir3z4.txt
 			// https://drive.google.com/file/d/1GgXVQg11M2h0RMftEH_-o1HPcJgsdWSw/view
-			BufferedReader s = new BufferedReader(new FileReader("src/main/resources/stopwords"));
+			BufferedReader s = new BufferedReader(new FileReader(pathToStopwords));
 			String online;
 			while ((online = s.readLine()) != null) {
 				String word = online.replaceAll("\\s+", "");

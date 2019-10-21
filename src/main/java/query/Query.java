@@ -36,7 +36,7 @@ import com.google.common.collect.Sets;
 // returns docs to User
 public class Query {
 
-	private String pathToCSV = "src/main/resources/collection/wikipedia_text_files.csv";
+	private String pathToCSV = "C:/Users/candy/Documents/2019-Fall/CS 437/eclipse/irproject/src/main/resources/collection/wikipedia_text_files.csv";
 	private ObjectOpenHashSet<String> stopwords = new ObjectOpenHashSet<String>();
 	private Indexing indexing;
 	private Object2IntOpenHashMap<String> queryTermFreq = new Object2IntOpenHashMap<String>();
@@ -75,14 +75,17 @@ public class Query {
 		}
 	}
 
-	public Int2ObjectOpenHashMap<String[]> getResults() {
+	public ArrayList<String[]> getResults() {
 		identifyCandidateResources();
 		relevanceRanking();
 		snippetGeneration();
 
+		ArrayList<String[]> result = new ArrayList<String[]>();
+		
 		int i = 1;
 		for (int docID : top5DocIDs) {
 			String[] snippet = snippets.get(docID);
+			result.add(snippet);
 			System.out.println();
 			System.out.println(i + " of " + top5DocIDs.size() + " results");
 			System.out.println(snippet[0]);
@@ -90,7 +93,7 @@ public class Query {
 			System.out.println(snippet[2]);
 			i++;
 		}
-		return snippets;
+		return result;
 	}
 
 	/**
