@@ -19,15 +19,15 @@ import java.util.TreeMap;
  *
  */
 public class Suggestions {
-	private static Map<String, Set<Integer>> queryGivenID = new HashMap<String, Set<Integer>>(); 	//query is key, ID is value																						// suggestions
-	private static Map<Integer, Set<String>> IDGivenQuery = new HashMap<Integer, Set<String>>(); 	//ID is key, query is value
-	private static Map<String, Integer> frequency = new HashMap<String, Integer>();		//calculates frequency of a query as its read through
-	private static Set<String> candidateSet = new HashSet<String>();	//set of candidate suggestion queries
-	private static Set<String> scoredCandidateSet = new HashSet<String>();	//candidate set that has score value. This one is returned!
-	private static Set<String> emptySet = new HashSet<String>();	//empty set
-	private static Map<String, Double> score = new HashMap<String, Double>(); 	//calculated score map
-	private static int totalFrequency = 1;	//frequency starts at 1 when query is first read
-	private static int maxFrequency = 0;	
+	private Map<String, Set<Integer>> queryGivenID = new HashMap<String, Set<Integer>>(); 	//query is key, ID is value																						// suggestions
+	private Map<Integer, Set<String>> IDGivenQuery = new HashMap<Integer, Set<String>>(); 	//ID is key, query is value
+	private Map<String, Integer> frequency = new HashMap<String, Integer>();		//calculates frequency of a query as its read through
+	private Set<String> candidateSet = new HashSet<String>();	//set of candidate suggestion queries
+	private Set<String> scoredCandidateSet = new HashSet<String>();	//candidate set that has score value. This one is returned!
+	private Set<String> emptySet = new HashSet<String>();	//empty set
+	private Map<String, Double> score = new HashMap<String, Double>(); 	//calculated score map
+	private int totalFrequency = 1;	//frequency starts at 1 when query is first read
+	private int maxFrequency = 0;	
 
 	/**
 	 * Main method runs getCandidates
@@ -36,8 +36,9 @@ public class Suggestions {
 	 */
 	public static void main(String[] args) throws FileNotFoundException{
 
-		System.out.println(getCandidates("united") + "\n");
-		System.out.println(getCandidates("Boise") + "\n");
+		Suggestions s = new Suggestions();
+		System.out.println(s.getCandidates("united") + "\n");
+		System.out.println(s.getCandidates("Boise") + "\n");
 	}
 	
 	/**
@@ -49,7 +50,7 @@ public class Suggestions {
 	 * @throws FileNotFoundException
 	 */
 	@SuppressWarnings("resource")
-	public static Set<String> getCandidates(String inputPhrase) throws FileNotFoundException {
+	public Set<String> getCandidates(String inputPhrase) throws FileNotFoundException {
 		//list of files for query logs
 		File[] testFile = new File("src/main/resources/queryLogs/").listFiles();
 		for(File f : testFile) {
