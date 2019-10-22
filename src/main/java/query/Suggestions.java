@@ -129,16 +129,6 @@ public class Suggestions {
 			}
 		}
 		
-		Double frequencyOrd = (double) 0;
-		for(String organizedCandidate: candidateSet) {
-			double frequencyQuery = frequency.get(organizedCandidate);
-			double newFrequency = (frequencyQuery/maxFrequency);
-			
-			double scoredFrequency = (newFrequency/(1-newFrequency));
-			
-			score.put(organizedCandidate, scoredFrequency);
-		}
-		
 		int queryChangeCount;
 		int totalSessionCount = 0;
 		Map<Integer, Integer> changeCount = new HashMap<Integer, Integer>();
@@ -157,6 +147,22 @@ public class Suggestions {
 			}
 			
 		}
+		
+		for(String organizedCandidate: candidateSet) {
+			double frequencyQuery = frequency.get(organizedCandidate);
+			double newFrequency = (frequencyQuery/maxFrequency);
+			double scoredMOD = 0;
+			Set<Integer> givenID = queryGivenID.get(organizedCandidate);
+			for(Integer id : givenID) {
+				int mod1 = changeCount.get(id);
+				scoredMOD = (mod1/totalSessionCount);
+			}
+			
+			double scored = ((newFrequency + scoredMOD)/ 1 - Math.min(newFrequency, scoredMOD));
+			
+			score.put(organizedCandidate, scored);
+		}
+		
 //		System.out.println("Session count");
 //		System.out.println(totalSessionCount);
 //		System.out.println(changeCount);
