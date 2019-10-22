@@ -22,7 +22,10 @@
   	</form>
   	
   	<c:if test = "${empty param.query}">
-       <div style="margin-top: 20px;">disclaimer: it takes awhile to get results :|</div>  
+       <div style="margin-top: 20px;">
+       	<div>disclaimer: it takes awhile to get results :|</div>
+       	<div>please be patient, thank you</div>
+       </div>  
     </c:if> 
   	
   	<c:if test = "${not empty param.query}">

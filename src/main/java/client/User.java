@@ -7,10 +7,8 @@ import query.Query;
 
 public class User {
 	
-	private String completedQuery;
+	public String completedQuery;
 	private Query q;
-	
-	private List<String[]> results;
 
 	public User() {
 	}
@@ -19,7 +17,7 @@ public class User {
 		this.completedQuery = q;
 		System.out.println("set query to: " + completedQuery);
 	}
-
+	
 	public String getCompletedQuery() {
 		return this.completedQuery;
 	}
