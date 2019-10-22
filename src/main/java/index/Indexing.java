@@ -32,12 +32,13 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
 public class Indexing {
 
-	private String pathToCSV = "src/main/resources/collection/wikipedia_text_files.csv";
-	private String pathToSERIndex = "src/main/resources/index.ser";
-	private String pathToUnsortedIndex = "src/main/resources/unsorted-index.txt";
-	private String pathToFreq = "src/main/resources/freq.txt";
-	private String pathToFreq49 = "src/main/resources/freq49.txt";
-	private String pathToMaxDocFreq = "src/main/resources/maxDocFreq.ser";
+	private String pathToCSV = "C:/Users/candy/Documents/2019-Fall/CS 437/eclipse/irproject/src/main/resources/collection/wikipedia_text_files.csv";
+	private String pathToSERIndex = "C:/Users/candy/Documents/2019-Fall/CS 437/eclipse/irproject/src/main/resources/index.ser";
+	private String pathToUnsortedIndex = "C:/Users/candy/Documents/2019-Fall/CS 437/eclipse/irproject/src/main/resources/unsorted-index.txt";
+	private String pathToFreq = "C:/Users/candy/Documents/2019-Fall/CS 437/eclipse/irproject/src/main/resources/freq.txt";
+	private String pathToFreq49 = "C:/Users/candy/Documents/2019-Fall/CS 437/eclipse/irproject/src/main/resources/freq49.txt";
+	private String pathToMaxDocFreq = "C:/Users/candy/Documents/2019-Fall/CS 437/eclipse/irproject/src/main/resources/maxDocFreq.ser";
+	private String pathToStopwords = "C:/Users/candy/Documents/2019-Fall/CS 437/eclipse/irproject/src/main/resources/stopwords";
 
 	/**
 	 * Lower cases and removes certain characters
@@ -72,9 +73,27 @@ public class Indexing {
 	 */
 	public String stopAndStem(String line) {
 		ObjectOpenHashSet<String> stopwords = getStopwords();
+		PorterStemmer stemmer = new PorterStemmer();
+		String[] tokens = line.split("\\s+");
+		String result = "";
+		for (String token : tokens) {
+			// if token isn't a stopword, stem it and add to result
+			if (!stopwords.contains(token)) {
+				result += " " + stemmer.stem(token);
+			}
+		}
+		return result;
+	}
 
-		// stemmer from https://opennlp.apache.org/ - apache openNLP 1.9.1
-		PorterStemmer2 stemmer = new PorterStemmer2();
+	/**
+	 * Remove stopwords and stem remaining words
+	 * 
+	 * @param line to have stopwords removed and remaining words stemmed
+	 * @return line after stopwords removed and remaining words stemmed
+	 * @throws IOException
+	 */
+	public String stopAndStem(String line, ObjectOpenHashSet<String> stopwords) {
+		PorterStemmer stemmer = new PorterStemmer();
 		String[] tokens = line.split("\\s+");
 		String result = "";
 		for (String token : tokens) {
@@ -106,7 +125,7 @@ public class Indexing {
 			FileInputStream fileIn = new FileInputStream(pathToMaxDocFreq);
 			ObjectInputStream in = new ObjectInputStream(fileIn);
 			Int2IntOpenHashMap allMaxFreq = (Int2IntOpenHashMap) in.readObject();
-			in.close();			
+			in.close();
 			for (int doc : resources) {
 				maxFreq.put(doc, allMaxFreq.get(doc));
 			}
@@ -145,7 +164,7 @@ public class Indexing {
 			// https://github.com/igorbrigadir/stopwords/blob/master/en/alir3z4.txt
 			// https://drive.google.com/file/d/1GgXVQg11M2h0RMftEH_-o1HPcJgsdWSw/view
 			ObjectOpenHashSet<String> stopwordsTemp = new ObjectOpenHashSet<String>();
-			BufferedReader s = new BufferedReader(new FileReader("src/main/resources/stopwords"));
+			BufferedReader s = new BufferedReader(new FileReader(pathToStopwords));
 			String line;
 			while ((line = s.readLine()) != null) {
 				String word = line.replaceAll("\\s+", "");
@@ -190,7 +209,7 @@ public class Indexing {
 				// get max frequency of stemmed words in document (for ranking documents)
 				int max = 0;
 				Object2IntOpenHashMap<String> stemUnique = new Object2IntOpenHashMap<String>();
-				PorterStemmer2 stemmer = new PorterStemmer2();
+				PorterStemmer stemmer = new PorterStemmer();
 				for (String word : unique.keySet()) {
 					// not an additional stopword
 					if (vocab.get(word) > 49 && word.compareTo("-") != 0 && word.compareTo("school") != 0) {
@@ -207,7 +226,7 @@ public class Indexing {
 				}
 				maxFreq.put(Integer.parseInt(record.get("id")), max);
 			}
-			
+
 			FileOutputStream fileout = new FileOutputStream(pathToMaxDocFreq);
 			ObjectOutputStream out = new ObjectOutputStream(fileout);
 			out.writeObject(maxFreq);
@@ -286,13 +305,13 @@ public class Indexing {
 	 * 
 	 * @throws IOException
 	 */
-	private ObjectOpenHashSet<String> getStopwords() {
+	public ObjectOpenHashSet<String> getStopwords() {
 		ObjectOpenHashSet<String> stopwords = new ObjectOpenHashSet<String>();
 		try {
 			// stopwords from:
 			// https://github.com/igorbrigadir/stopwords/blob/master/en/alir3z4.txt
 			// https://drive.google.com/file/d/1GgXVQg11M2h0RMftEH_-o1HPcJgsdWSw/view
-			BufferedReader s = new BufferedReader(new FileReader("src/main/resources/stopwords"));
+			BufferedReader s = new BufferedReader(new FileReader(pathToStopwords));
 			String online;
 			while ((online = s.readLine()) != null) {
 				String word = online.replaceAll("\\s+", "");
@@ -334,7 +353,7 @@ public class Indexing {
 			Object2ObjectOpenHashMap<String, Int2IntOpenHashMap> index = new Object2ObjectOpenHashMap<String, Int2IntOpenHashMap>();
 
 			System.out.println("stem index....");
-			PorterStemmer2 stemmer = new PorterStemmer2();
+			PorterStemmer stemmer = new PorterStemmer();
 			BufferedReader in = new BufferedReader(new FileReader(pathToUnsortedIndex));
 			int count = 1;
 			String line;
@@ -373,7 +392,7 @@ public class Indexing {
 			}
 			in.close();
 
-			System.out.println("write index of size " + index.size() + " to file....");			
+			System.out.println("write index of size " + index.size() + " to file....");
 			FileOutputStream fileout = new FileOutputStream(pathToSERIndex);
 			ObjectOutputStream out = new ObjectOutputStream(fileout);
 			out.writeObject(index);
@@ -384,7 +403,5 @@ public class Indexing {
 	}
 
 	public static void main(String[] args) {
-		Indexing indexing = new Indexing();
-		indexing.frequencies();
 	}
 }

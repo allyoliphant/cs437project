@@ -27,3 +27,23 @@ button {
 	min-height: 35px;
 	padding: 0 15px;
 }
+
+.results {
+	max-width: 150px;
+}
+
+.title, .sentence {	
+	text-align: left !important;
+}
+
+.title {
+	font-weight: bold;
+	font-size: 18px;
+	text-align: left !important;
+	margin-top: 10px;
+}
+
+.sentence {
+	font-size: 12px;
+	text-align: left !important;
+}
