@@ -10,30 +10,47 @@ import java.util.Set;
 import java.util.TreeMap;
 
 
-//gets input from User class
-//returns suggested queries to User class
-
+/**
+ * 
+ * @author Samantha Maxey
+ * 
+ * gets input from User class
+ * returns top 5 suggested queries to User class
+ *
+ */
 public class Suggestions {
-	private static Map<String, Set<Integer>> queryGivenID = new HashMap<String, Set<Integer>>(); 																							// suggestions
-	private static Map<Integer, Set<String>> IDGivenQuery = new HashMap<Integer, Set<String>>(); 
-	private static Map<String, Integer> frequency = new HashMap<String, Integer>();
-	private static Set<String> candidateSet = new HashSet<String>();
-	private static Set<String> scoredCandidateSet = new HashSet<String>();
-	private static Set<String> emptySet = new HashSet<String>();
-	private static Map<String, Double> score = new HashMap<String, Double>();;
-	private static int totalFrequency = 1;
-	private static int maxFrequency = 0;
+	private static Map<String, Set<Integer>> queryGivenID = new HashMap<String, Set<Integer>>(); 	//query is key, ID is value																						// suggestions
+	private static Map<Integer, Set<String>> IDGivenQuery = new HashMap<Integer, Set<String>>(); 	//ID is key, query is value
+	private static Map<String, Integer> frequency = new HashMap<String, Integer>();		//calculates frequency of a query as its read through
+	private static Set<String> candidateSet = new HashSet<String>();	//set of candidate suggestion queries
+	private static Set<String> scoredCandidateSet = new HashSet<String>();	//candidate set that has score value. This one is returned!
+	private static Set<String> emptySet = new HashSet<String>();	//empty set
+	private static Map<String, Double> score = new HashMap<String, Double>(); 	//calculated score map
+	private static int totalFrequency = 1;	//frequency starts at 1 when query is first read
+	private static int maxFrequency = 0;	
 
-	
+	/**
+	 * Main method runs getCandidates
+	 * @param args
+	 * @throws FileNotFoundException
+	 */
 	public static void main(String[] args) throws FileNotFoundException{
 
 		System.out.println(getCandidates("united") + "\n");
 		System.out.println(getCandidates("Boise") + "\n");
 	}
 	
-
+	/**
+	 * This whole method reads the query logs, fills up the maps and sets, and
+	 * calculates the suggested queries.
+	 * 
+	 * @param inputPhrase
+	 * @return top 5 suggested queries
+	 * @throws FileNotFoundException
+	 */
 	@SuppressWarnings("resource")
 	public static Set<String> getCandidates(String inputPhrase) throws FileNotFoundException {
+		//list of files for query logs
 		File[] testFile = new File("src/main/resources/queryLogs/").listFiles();
 		for(File f : testFile) {
 			if(f.getName().endsWith(".txt")){
@@ -106,6 +123,9 @@ public class Suggestions {
 			System.out.println("There is no suggestions for: " + inputPhrase);
 			return emptySet;
 		}
+		//Queries found to have contained the input phrase. We grab the
+		//ID of those queries and place it into the foundID if it doesn't
+		//already exist
 		Set<Integer> foundID = new HashSet<Integer>();
 		for (Map.Entry<String, Set<Integer>> entry : queryGivenID.entrySet()) {
 			if (entry.getKey().contains(inputPhrase)) {
@@ -114,6 +134,8 @@ public class Suggestions {
 
 		}
 
+		//IDs that are known to have the input phrase are now being searched for
+		//when the query in the ID starts with the input phrase
 		for (int fID : foundID) {
 			Set<String> query1 = IDGivenQuery.get(fID);
 			for (String fQuery : query1) {
@@ -123,12 +145,14 @@ public class Suggestions {
 			}
 		}
 		
+		//calculates max frequency.
 		for(Map.Entry<String, Integer> mFreq : frequency.entrySet()) {
 			if(mFreq.getValue() > maxFrequency) {
 				maxFrequency = mFreq.getValue();
 			}
 		}
 		
+		//Mod calculation of query change count and total session count
 		int queryChangeCount;
 		int totalSessionCount = 0;
 		Map<Integer, Integer> changeCount = new HashMap<Integer, Integer>();
@@ -148,6 +172,8 @@ public class Suggestions {
 			
 		}
 		
+		//iterates through the candidate set to get the frequency calculation and Mod calculation
+		//This puts it into a new map called 'score'
 		for(String organizedCandidate: candidateSet) {
 			double frequencyQuery = frequency.get(organizedCandidate);
 			double newFrequency = (frequencyQuery/maxFrequency);
@@ -167,7 +193,7 @@ public class Suggestions {
 //		System.out.println(totalSessionCount);
 //		System.out.println(changeCount);
 	
-		
+		//TreeMap is used to organize the 'score' Map so that we can find the top 5.
 		TreeMap<String, Double> sorted = new TreeMap<String, Double>();
 		sorted.putAll(score);
 
@@ -180,8 +206,6 @@ public class Suggestions {
 			}
 		}
 	
-		
-
 		return scoredCandidateSet;
 
 	}
