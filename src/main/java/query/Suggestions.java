@@ -160,6 +160,7 @@ public class Suggestions {
 //		System.out.println("Session count");
 //		System.out.println(totalSessionCount);
 //		System.out.println(changeCount);
+	
 		
 		TreeMap<String, Double> sorted = new TreeMap<String, Double>();
 		sorted.putAll(score);
