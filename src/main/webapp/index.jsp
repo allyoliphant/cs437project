@@ -17,9 +17,17 @@
   	<h1>Ally & Sammy's Wiki Search</h1>
   	
   	<form>
-    	<input type="text" size="75" name="query">  
+    	<input id="textbox_id" type="text" size="75" name="query">  
     	<button type="submit" name="search">search</button>	
   	</form>
+  	
+  	<script>
+	  	$(window).keypress(function (e) {
+	  	  if (e.key === ' ' || e.key === 'Spacebar') {
+	  		  <% user.getSuggestions(request.getParameter("query")); %>
+	  	  }
+	  	})
+  	</script>
   	
   	<c:if test = "${empty param.query}">
        <div style="margin-top: 20px;">

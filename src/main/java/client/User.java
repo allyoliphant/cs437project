@@ -8,6 +8,7 @@ import query.Query;
 public class User {
 	
 	public String completedQuery;
+	public String suggestionQuery;
 	private Query q;
 
 	public User() {
@@ -23,11 +24,12 @@ public class User {
 	}
 	
 	public void getSuggestions(String query) {
-		// calls method in Suggestions class
+		System.out.println(query);
 	}
 	
 	public ArrayList<String[]> getResults() {
 		q = new Query(completedQuery);
 		return q.getResults();		
 	}
+	
 }

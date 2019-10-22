@@ -36,7 +36,7 @@ import com.google.common.collect.Sets;
 // returns docs to User
 public class Query {
 
-	private String pathToCSV = "C:/Users/candy/Documents/2019-Fall/CS 437/eclipse/irproject/src/main/resources/collection/wikipedia_text_files.csv";
+	private String pathToCSV = "src/main/resources/collection/wikipedia_text_files.csv";
 	private ObjectOpenHashSet<String> stopwords = new ObjectOpenHashSet<String>();
 	private Indexing indexing;
 	private Object2IntOpenHashMap<String> queryTermFreq = new Object2IntOpenHashMap<String>();

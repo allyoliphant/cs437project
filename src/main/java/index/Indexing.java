@@ -32,13 +32,13 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
 public class Indexing {
 
-	private String pathToCSV = "C:/Users/candy/Documents/2019-Fall/CS 437/eclipse/irproject/src/main/resources/collection/wikipedia_text_files.csv";
-	private String pathToSERIndex = "C:/Users/candy/Documents/2019-Fall/CS 437/eclipse/irproject/src/main/resources/index.ser";
-	private String pathToUnsortedIndex = "C:/Users/candy/Documents/2019-Fall/CS 437/eclipse/irproject/src/main/resources/unsorted-index.txt";
-	private String pathToFreq = "C:/Users/candy/Documents/2019-Fall/CS 437/eclipse/irproject/src/main/resources/freq.txt";
-	private String pathToFreq49 = "C:/Users/candy/Documents/2019-Fall/CS 437/eclipse/irproject/src/main/resources/freq49.txt";
-	private String pathToMaxDocFreq = "C:/Users/candy/Documents/2019-Fall/CS 437/eclipse/irproject/src/main/resources/maxDocFreq.ser";
-	private String pathToStopwords = "C:/Users/candy/Documents/2019-Fall/CS 437/eclipse/irproject/src/main/resources/stopwords";
+	private String pathToCSV = "src/main/resources/collection/wikipedia_text_files.csv";
+	private String pathToSERIndex = "src/main/resources/index.ser";
+	private String pathToUnsortedIndex = "src/main/resources/unsorted-index.txt";
+	private String pathToFreq = "src/main/resources/freq.txt";
+	private String pathToFreq49 = "src/main/resources/freq49.txt";
+	private String pathToMaxDocFreq = "src/main/resources/maxDocFreq.ser";
+	private String pathToStopwords = "src/main/resources/stopwords";
 
 	/**
 	 * Lower cases and removes certain characters
