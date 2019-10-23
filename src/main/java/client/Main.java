@@ -10,6 +10,7 @@ import java.util.Set;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
@@ -17,46 +18,53 @@ import query.Query;
 import query.Suggestions;
 
 public class Main {
+
+	static boolean suggestOn = true;
+
 	public static void main(String[] argv) throws Exception {
 		JFrame f = new JFrame("Ally and Sammy's Wiki Search");
 
 		JTextField textfield = new JTextField(30);
 		textfield.setBounds(20, 20, 450, 20);
 		JButton b = new JButton("search");
-		b.setBounds(465, 20, 80, 20);
+		b.setBounds(475, 20, 80, 20);
+		JButton bSuggest = new JButton("toggle suggestion queires");
+		bSuggest.setBounds(575, 20, 180, 20);
+		JLabel textSuggest = new JLabel("suggestions on");
+		textSuggest.setBounds(775, 20, 120, 20);
 
 		JTextArea suggestions = new JTextArea();
-		suggestions.setBounds(20, 50, 940, 80);
-		suggestions.setRows(5);
+		suggestions.setBounds(20, 50, 940, 100);
+		suggestions.setRows(6);
 		suggestions.setLineWrap(true);
 		suggestions.setWrapStyleWord(true);
 
 		JTextArea result1 = new JTextArea();
-		result1.setBounds(20, 140, 940, 80);
+		result1.setBounds(20, 160, 940, 80);
 		result1.setRows(5);
 		result1.setLineWrap(true);
 		result1.setWrapStyleWord(true);
 
 		JTextArea result2 = new JTextArea();
-		result2.setBounds(20, 230, 940, 80);
+		result2.setBounds(20, 250, 940, 80);
 		result2.setRows(5);
 		result2.setLineWrap(true);
 		result2.setWrapStyleWord(true);
 
 		JTextArea result3 = new JTextArea();
-		result3.setBounds(20, 320, 940, 80);
+		result3.setBounds(20, 340, 940, 80);
 		result3.setRows(5);
 		result3.setLineWrap(true);
 		result3.setWrapStyleWord(true);
 
 		JTextArea result4 = new JTextArea();
-		result4.setBounds(20, 410, 940, 80);
+		result4.setBounds(20, 430, 940, 80);
 		result4.setRows(5);
 		result4.setLineWrap(true);
 		result4.setWrapStyleWord(true);
 
 		JTextArea result5 = new JTextArea();
-		result5.setBounds(20, 500, 940, 80);
+		result5.setBounds(20, 520, 940, 80);
 		result5.setRows(5);
 		result5.setLineWrap(true);
 		result5.setWrapStyleWord(true);
@@ -64,6 +72,8 @@ public class Main {
 		// add to frame
 		f.add(textfield);
 		f.add(b);
+		f.add(textSuggest);
+		f.add(bSuggest);
 		f.add(suggestions);
 		f.add(result1);
 		f.add(result2);
@@ -75,7 +85,6 @@ public class Main {
 		f.setVisible(true);
 		f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-		// action listener
 		b.addActionListener(new ActionListener() {
 
 			public void actionPerformed(ActionEvent arg0) {
@@ -104,24 +113,35 @@ public class Main {
 			}
 		});
 
+		bSuggest.addActionListener(new ActionListener() {
+
+			public void actionPerformed(ActionEvent arg0) {
+				suggestOn = !suggestOn;
+				textSuggest.setText(suggestOn ? "suggestions on" : "suggestions off");
+
+			}
+		});
+
 		textfield.addKeyListener(new KeyAdapter() {
 			@Override
 			public void keyPressed(KeyEvent e) {
-				if (e.getKeyCode() == KeyEvent.VK_SPACE) {
-					System.out.println("getting suggestion queries....");
-					Suggestions s = new Suggestions();
-					try {
-						Set<String> suggest = s.getCandidates(textfield.getText());
-						String sug = "suggested queries:";
-						for (String query : suggest) {
-							sug += "\n" + query;
-						}
-						suggestions.setText(sug);
+				if (suggestOn) {
+					if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+						System.out.println("getting suggestion queries....");
+						Suggestions s = new Suggestions();
+						try {
+							Set<String> suggest = s.getCandidates(textfield.getText());
+							String sug = "suggested queries:";
+							for (String query : suggest) {
+								sug += "\n" + query;
+							}
+							suggestions.setText(sug);
 
-					} catch (FileNotFoundException e1) {
-						e1.printStackTrace();
+						} catch (FileNotFoundException e1) {
+							e1.printStackTrace();
+						}
+						System.out.println(textfield.getText());
 					}
-					System.out.println(textfield.getText());
 				}
 			}
 
