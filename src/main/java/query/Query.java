@@ -42,24 +42,26 @@ public class Query {
 	private Object2IntOpenHashMap<String> queryTermFreq = new Object2IntOpenHashMap<String>();
 	private Object2DoubleOpenHashMap<String> queryTF = new Object2DoubleOpenHashMap<String>();
 	private String processedQuery;
+	private String[] queryTerms;
+	
 	// keeps track of the number of times w appears in d
 	private Int2ObjectOpenHashMap<Object2IntOpenHashMap<String>> docFreq = new Int2ObjectOpenHashMap<Object2IntOpenHashMap<String>>();
 	// keeps track of the number of documents in DC in which w appears at least once
 	private Object2IntOpenHashMap<String> collectFreq = new Object2IntOpenHashMap<String>();
-	// global set of candidate resources
-	private IntOpenHashSet resources = new IntOpenHashSet();
+	
 	// max five candidate resources with the top relevance scores
 	private List<Integer> top5DocIDs = new ArrayList<Integer>();
 	private IntOpenHashSet top5 = new IntOpenHashSet();
 	private Int2ObjectOpenHashMap<String[]> snippets = new Int2ObjectOpenHashMap<String[]>();
 
 	public Query(String q) {
+		System.out.println();
 		indexing = new Indexing();
 		System.out.println("processing the query....");
 		processedQuery = indexing.stopAndStem(indexing.caseAndCharacters(q)).trim();
-		String[] terms = processedQuery.split(" ");
+		queryTerms = processedQuery.split("\\s+");
 		int maxFreq = 1;
-		for (String term : terms) {
+		for (String term : queryTerms) {
 			if (!queryTermFreq.containsKey(term)) {
 				queryTermFreq.addTo(term, 1);
 			} else {
@@ -76,23 +78,26 @@ public class Query {
 	}
 
 	public ArrayList<String[]> getResults() {
-		identifyCandidateResources();
-		relevanceRanking();
-		snippetGeneration();
-
 		ArrayList<String[]> result = new ArrayList<String[]>();
-		
-		int i = 1;
-		for (int docID : top5DocIDs) {
-			String[] snippet = snippets.get(docID);
-			result.add(snippet);
-			System.out.println();
-			System.out.println(i + " of " + top5DocIDs.size() + " results");
-			System.out.println(snippet[0]);
-			System.out.println(snippet[1]);
-			System.out.println(snippet[2]);
-			i++;
+		identifyCandidateResources();
+
+		if (docFreq.size() != 0) {
+			relevanceRanking();
+			snippetGeneration();
+			int i = 1;
+			for (int docID : top5DocIDs) {
+				String[] snippet = snippets.get(docID);
+				result.add(snippet);
+				System.out.println();
+				System.out.println(i + " of " + top5DocIDs.size() + " results");
+				System.out.println(snippet[0]);
+				System.out.println(snippet[1]);
+				System.out.println(snippet[2]);
+				i++;
+			}
 		}
+
+		System.out.println("done getting results");
 		return result;
 	}
 
@@ -103,14 +108,12 @@ public class Query {
 	 */
 	private void identifyCandidateResources() {
 		System.out.println("getting the index....");
-		Object2ObjectOpenHashMap<String, Int2IntOpenHashMap> index = indexing.getIndex();
-
-		String[] terms = processedQuery.split("\\s+");
+		Object2ObjectOpenHashMap<String, Int2IntOpenHashMap> index = indexing.getIndex(queryTerms);
 
 		System.out.println("finding the candidates....");
 		Set<Integer> cr = new HashSet<Integer>();
 		Int2IntOpenHashMap allDocs = new Int2IntOpenHashMap(); // docIDs and number of terms from query they contain
-		for (String term : terms) {
+		for (String term : queryTerms) {
 			if (term.length() > 0 && !collectFreq.containsKey(term) && index.containsKey(term)) {
 				Int2IntOpenHashMap docs = index.get(term);
 				System.out.println("  term '" + term + "' in index with " + docs.size() + " docs");
@@ -126,7 +129,7 @@ public class Query {
 					}
 				}
 
-				if (term.compareTo(terms[0]) != 0) {
+				if (term.compareTo(queryTerms[0]) != 0) {
 					// intersection performs faster when smaller set is first
 					if (cr.size() > termDocs.size()) {
 						cr = Sets.intersection(termDocs, cr);
@@ -162,7 +165,6 @@ public class Query {
 				}
 			}
 			docFreq.put(doc, termFreq);
-			resources.add(doc);
 		}
 	}
 
@@ -172,10 +174,10 @@ public class Query {
 	 */
 	private void relevanceRanking() {
 		System.out.println("calculating relevance ranking....");
-		Int2IntOpenHashMap maxDocFreq = indexing.getMaxDocFreq(resources);
+		Int2IntOpenHashMap maxDocFreq = indexing.getMaxDocFreq(docFreq.keySet());
 		HashMap<Integer, Double> relevanceScore = new HashMap<Integer, Double>();
 
-		for (int doc : resources) {
+		for (int doc : docFreq.keySet()) {
 			Object2IntOpenHashMap<String> freqInDoc = docFreq.get(doc);
 			double score = 0.0;
 			for (String word : collectFreq.keySet()) {
@@ -223,7 +225,7 @@ public class Query {
 					String[] snip = new String[3];
 					snip[0] = record.get("title").replaceAll("_", " ");
 
-					String content = record.get("content").substring(snip[0].length()).trim();  // title is at the start of the content, remove it
+					String content = record.get("content").substring(snip[0].length()).trim();
 
 					// get list of all the sentences
 					ArrayList<String> allSentences = new ArrayList<String>();
@@ -351,9 +353,6 @@ public class Query {
 	}
 
 	public static void main(String[] args) {
-		Query q = new Query("cats and kittens");
-		q.getResults();
 
 	}
-
 }

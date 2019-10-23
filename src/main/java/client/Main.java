@@ -1,8 +1,5 @@
 package client;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
@@ -11,13 +8,10 @@ import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Set;
 
-import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
-import javax.swing.border.Border;
 
 import query.Query;
 import query.Suggestions;
@@ -25,19 +19,17 @@ import query.Suggestions;
 public class Main {
 	public static void main(String[] argv) throws Exception {
 		JFrame f = new JFrame("Ally and Sammy's Wiki Search");
-		
+
 		JTextField textfield = new JTextField(30);
 		textfield.setBounds(20, 20, 450, 20);
 		JButton b = new JButton("search");
 		b.setBounds(465, 20, 80, 20);
-		
 
 		JTextArea suggestions = new JTextArea();
 		suggestions.setBounds(20, 50, 940, 80);
 		suggestions.setRows(5);
 		suggestions.setLineWrap(true);
 		suggestions.setWrapStyleWord(true);
-		
 
 		JTextArea result1 = new JTextArea();
 		result1.setBounds(20, 140, 940, 80);
@@ -68,10 +60,7 @@ public class Main {
 		result5.setRows(5);
 		result5.setLineWrap(true);
 		result5.setWrapStyleWord(true);
-		
-		
-		
-		
+
 		// add to frame
 		f.add(textfield);
 		f.add(b);
@@ -90,37 +79,53 @@ public class Main {
 		b.addActionListener(new ActionListener() {
 
 			public void actionPerformed(ActionEvent arg0) {
+				result1.setText("");
+				result2.setText("");
+				result3.setText("");
+				result4.setText("");
+				result5.setText("");
+
 				Query q = new Query(textfield.getText());
-				ArrayList<String[]> results = q.getResults();				
-				result1.setText(results.get(0)[0] + "\n" + results.get(0)[1] + "\n" + results.get(0)[2]);
-				result2.setText(results.get(1)[0] + "\n" + results.get(1)[1] + "\n" + results.get(1)[2]);
-				result3.setText(results.get(2)[0] + "\n" + results.get(2)[1] + "\n" + results.get(2)[2]);
-				result4.setText(results.get(3)[0] + "\n" + results.get(3)[1] + "\n" + results.get(3)[2]);
-				result5.setText(results.get(4)[0] + "\n" + results.get(4)[1] + "\n" + results.get(4)[2]);
+				ArrayList<String[]> results = q.getResults();
+				if (results.size() == 0) {
+					result1.setText("no results for: " + textfield.getText());
+				} else {
+					if (results.size() > 0)
+						result1.setText(results.get(0)[0] + "\n" + results.get(0)[1] + "\n" + results.get(0)[2]);
+					if (results.size() > 1)
+						result2.setText(results.get(1)[0] + "\n" + results.get(1)[1] + "\n" + results.get(1)[2]);
+					if (results.size() > 2)
+						result3.setText(results.get(2)[0] + "\n" + results.get(2)[1] + "\n" + results.get(2)[2]);
+					if (results.size() > 3)
+						result4.setText(results.get(3)[0] + "\n" + results.get(3)[1] + "\n" + results.get(3)[2]);
+					if (results.size() > 4)
+						result5.setText(results.get(4)[0] + "\n" + results.get(4)[1] + "\n" + results.get(4)[2]);
+				}
 			}
 		});
-		
+
 		textfield.addKeyListener(new KeyAdapter() {
-	        @Override
-	        public void keyPressed(KeyEvent e) {
-	            if(e.getKeyCode() == KeyEvent.VK_SPACE){
-	            	Suggestions s = new Suggestions();
-	            	try {
+			@Override
+			public void keyPressed(KeyEvent e) {
+				if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+					System.out.println("getting suggestion queries....");
+					Suggestions s = new Suggestions();
+					try {
 						Set<String> suggest = s.getCandidates(textfield.getText());
 						String sug = "suggested queries:";
 						for (String query : suggest) {
 							sug += "\n" + query;
 						}
 						suggestions.setText(sug);
-						
+
 					} catch (FileNotFoundException e1) {
 						e1.printStackTrace();
 					}
-	                System.out.println(textfield.getText());
-	            }
-	        }
+					System.out.println(textfield.getText());
+				}
+			}
 
-	    });
+		});
 
 	}
 }

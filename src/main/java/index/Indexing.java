@@ -26,6 +26,7 @@ import org.apache.commons.csv.CSVRecord;
 // http://fastutil.di.unimi.it/
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
@@ -106,20 +107,27 @@ public class Indexing {
 	}
 
 	@SuppressWarnings("unchecked")
-	public Object2ObjectOpenHashMap<String, Int2IntOpenHashMap> getIndex() {
+	public Object2ObjectOpenHashMap<String, Int2IntOpenHashMap> getIndex(String[] terms) {
 		Object2ObjectOpenHashMap<String, Int2IntOpenHashMap> index = new Object2ObjectOpenHashMap<String, Int2IntOpenHashMap>();
+		Object2ObjectOpenHashMap<String, Int2IntOpenHashMap> result = new Object2ObjectOpenHashMap<String, Int2IntOpenHashMap>();
 		try {
 			FileInputStream fileIn = new FileInputStream(pathToSERIndex);
 			ObjectInputStream in = new ObjectInputStream(fileIn);
 			index = (Object2ObjectOpenHashMap<String, Int2IntOpenHashMap>) in.readObject();
 			in.close();
+
+			for (String word : terms) {
+				if (index.containsKey(word)) {
+					result.put(word, index.get(word));
+				}
+			}
 		} catch (IOException | ClassNotFoundException e) {
 			System.err.println(e);
 		}
-		return index;
+		return result;
 	}
 
-	public Int2IntOpenHashMap getMaxDocFreq(IntOpenHashSet resources) {
+	public Int2IntOpenHashMap getMaxDocFreq(IntSet resources) {
 		Int2IntOpenHashMap maxFreq = new Int2IntOpenHashMap();
 		try {
 			FileInputStream fileIn = new FileInputStream(pathToMaxDocFreq);
