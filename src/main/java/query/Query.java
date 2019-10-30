@@ -1,14 +1,12 @@
 package query;
 
 import index.Indexing;
-import index.PorterStemmer;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectSet;
 
 import java.io.FileReader;
@@ -37,18 +35,17 @@ import com.google.common.collect.Sets;
 public class Query {
 
 	private String pathToCSV = "src/main/resources/collection/wikipedia_text_files.csv";
-	private ObjectOpenHashSet<String> stopwords = new ObjectOpenHashSet<String>();
 	private Indexing indexing;
 	private Object2IntOpenHashMap<String> queryTermFreq = new Object2IntOpenHashMap<String>();
 	private Object2DoubleOpenHashMap<String> queryTF = new Object2DoubleOpenHashMap<String>();
 	private String processedQuery;
 	private String[] queryTerms;
-	
+
 	// keeps track of the number of times w appears in d
 	private Int2ObjectOpenHashMap<Object2IntOpenHashMap<String>> docFreq = new Int2ObjectOpenHashMap<Object2IntOpenHashMap<String>>();
 	// keeps track of the number of documents in DC in which w appears at least once
 	private Object2IntOpenHashMap<String> collectFreq = new Object2IntOpenHashMap<String>();
-	
+
 	// max five candidate resources with the top relevance scores
 	private List<Integer> top5DocIDs = new ArrayList<Integer>();
 	private IntOpenHashSet top5 = new IntOpenHashSet();
@@ -57,6 +54,8 @@ public class Query {
 	public Query(String q) {
 		System.out.println();
 		indexing = new Indexing();
+
+		// process the query and get the necessary values for later
 		System.out.println("processing the query....");
 		processedQuery = indexing.stopAndStem(indexing.caseAndCharacters(q)).trim();
 		queryTerms = processedQuery.split("\\s+");
@@ -77,10 +76,16 @@ public class Query {
 		}
 	}
 
+	/**
+	 * Main method for getting the results of a query
+	 * 
+	 * @return snippets of the top 5 results
+	 */
 	public ArrayList<String[]> getResults() {
 		ArrayList<String[]> result = new ArrayList<String[]>();
 		identifyCandidateResources();
 
+		// if results were found
 		if (docFreq.size() != 0) {
 			relevanceRanking();
 			snippetGeneration();
@@ -120,6 +125,7 @@ public class Query {
 				collectFreq.put(term, docs.size());
 
 				Set<Integer> termDocs = new HashSet<Integer>();
+				// figure out how many terms from the query each document contains
 				for (int id : docs.keySet()) {
 					termDocs.add(id);
 					if (allDocs.containsKey(id)) {
@@ -129,6 +135,7 @@ public class Query {
 					}
 				}
 
+				// build set of documents were all have the terms from the query
 				if (term.compareTo(queryTerms[0]) != 0) {
 					// intersection performs faster when smaller set is first
 					if (cr.size() > termDocs.size()) {
@@ -145,7 +152,8 @@ public class Query {
 		}
 		System.out.println("  found " + cr.size() + " docs having all terms in index");
 
-		// set of candidate resources is too small
+		// set of candidate resources is too small (under 50 documents)
+		// add documents that have all but one terms to the set of candidate resources
 		if (cr.size() < 50) {
 			Set<Integer> subSet = new HashSet<Integer>();
 			for (int id : allDocs.keySet()) {
@@ -157,6 +165,8 @@ public class Query {
 			System.out.println("  added to cr, now " + cr.size());
 		}
 
+		// build a map of documents, terms from the query and the frequency in the
+		// document
 		for (int doc : cr) {
 			Object2IntOpenHashMap<String> termFreq = new Object2IntOpenHashMap<String>();
 			for (String term : collectFreq.keySet()) {
@@ -177,6 +187,7 @@ public class Query {
 		Int2IntOpenHashMap maxDocFreq = indexing.getMaxDocFreq(docFreq.keySet());
 		HashMap<Integer, Double> relevanceScore = new HashMap<Integer, Double>();
 
+		// get the score for each document
 		for (int doc : docFreq.keySet()) {
 			Object2IntOpenHashMap<String> freqInDoc = docFreq.get(doc);
 			double score = 0.0;
@@ -201,33 +212,43 @@ public class Query {
 		});
 
 		int r = 0;
+		// get the top 5 scores or all if there are less than 5 total
 		while (r < 5 && r < list.size()) {
 			Map.Entry<Integer, Double> entry = list.get(r);
 			top5DocIDs.add(entry.getKey());
 			top5.add((int) entry.getKey());
-			System.out.println("  " + (r + 1) + ". " + list.get(r).getValue());
+			System.out.println("  " + (r + 1) + ". " + list.get(r).getValue()); // print rank score of document
 			r++;
 		}
 	}
 
+	/**
+	 * For each selected result, create the corresponding snippet. This snippet
+	 * includes the title and the two sentences that have the highest cosine
+	 * similarity with respect to the query; with TF-IDF as the term weighting
+	 * scheme.
+	 */
 	private void snippetGeneration() {
 		try {
-			stopwords = indexing.getStopwords();
 			ObjectSet<String> queryWords = queryTermFreq.keySet();
 			System.out.println("generate snippets....");
-			BreakIterator bi = BreakIterator.getSentenceInstance(Locale.US);
+			BreakIterator bi = BreakIterator.getSentenceInstance(Locale.US); // used to parse the sentences
 			Reader in = new FileReader(pathToCSV);
 			CSVParser records = CSVFormat.EXCEL.withFirstRecordAsHeader().parse(in);
 			int r = 1;
+
+			// parse through the wiki collection, only stopping on the top 5 documents
 			for (CSVRecord record : records) {
 				if (top5DocIDs.contains(Integer.parseInt(record.get("id")))) {
 					System.out.println("  on selected result " + r + " of " + top5DocIDs.size());
-					String[] snip = new String[3];
-					snip[0] = record.get("title").replaceAll("_", " ");
+					String[] snip = new String[3]; // [0] = title, [1] and [2] = sentences
+					snip[0] = record.get("title").replaceAll("_", " "); // title of the document
 
+					// get the content minus the title
 					String content = record.get("content").substring(snip[0].length()).trim();
 
 					// get list of all the sentences
+					int numOfSentences = 0;
 					ArrayList<String> allSentences = new ArrayList<String>();
 					ArrayList<Object2DoubleOpenHashMap<String>> sentenceTFs = new ArrayList<Object2DoubleOpenHashMap<String>>();
 					Object2IntOpenHashMap<String> termDocFreq = new Object2IntOpenHashMap<String>();
@@ -236,14 +257,16 @@ public class Query {
 					}
 					bi.setText(content);
 					int lastIndex = bi.first();
+					// for each sentence in the document
 					while (lastIndex != BreakIterator.DONE) {
 						int firstIndex = lastIndex;
 						lastIndex = bi.next();
 						if (lastIndex != BreakIterator.DONE) {
 							String sentence = content.substring(firstIndex, lastIndex).trim();
+							numOfSentences++;
 
-							// get frequency of index terms in the query in the sentence
-							String[] words = stopAndStem(indexing.caseAndCharacters(sentence)).split(" ");
+							// get the frequency of index terms in the query in the sentence
+							String[] words = indexing.stopAndStem(indexing.caseAndCharacters(sentence)).split(" ");
 							Object2IntOpenHashMap<String> unique = new Object2IntOpenHashMap<String>();
 							int maxFreq = 0;
 							for (String word : words) {
@@ -259,7 +282,7 @@ public class Query {
 								}
 							}
 
-							// get tf of sentence
+							// get tf for each query term of the sentence
 							Object2DoubleOpenHashMap<String> tf = new Object2DoubleOpenHashMap<String>();
 							for (String term : queryWords) {
 								if (unique.containsKey(term)) {
@@ -275,11 +298,13 @@ public class Query {
 						}
 					}
 
+					// calculate the idf and the query squared sum for the bottom of the cosine
+					// similarity equation
 					Object2DoubleOpenHashMap<String> idf = new Object2DoubleOpenHashMap<String>();
 					double bottomQuerySum = 0;
 					Object2DoubleOpenHashMap<String> queryTFIDF = new Object2DoubleOpenHashMap<String>();
 					for (String term : queryWords) {
-						double sentenceIDF = (Math.log((double) sentenceTFs.size() / (double) termDocFreq.getInt(term))
+						double sentenceIDF = (Math.log((double) numOfSentences / (double) termDocFreq.getInt(term))
 								/ Math.log(2.0) + 1e-10);
 						idf.put(term, sentenceIDF);
 
@@ -288,20 +313,25 @@ public class Query {
 						bottomQuerySum += ti * ti;
 					}
 
+					// calculate the cosine similarity for each sentence
 					System.out.println("    calculate cosine similarity");
 					TreeMap<Double, ArrayList<Integer>> sentenceCosineScores = new TreeMap<Double, ArrayList<Integer>>();
 					for (int i = 0; i < sentenceTFs.size(); i++) {
 						Object2DoubleOpenHashMap<String> sentenceTFIDF = new Object2DoubleOpenHashMap<String>();
 						double topSum = 0;
 						double bottomDocSum = 0;
+						// get the tfxidf for each term
 						for (String term : queryWords) {
 							double ti = sentenceTFs.get(i).getDouble(term) * idf.getDouble(term);
 							sentenceTFIDF.put(term, ti);
 							topSum += sentenceTFIDF.getDouble(term) * queryTFIDF.getDouble(term);
 							bottomDocSum += sentenceTFIDF.getDouble(term) * sentenceTFIDF.getDouble(term);
 						}
-						double bottom = Math.sqrt(bottomDocSum * bottomQuerySum);
-						double score = topSum / bottom;
+						double bottom = Math.sqrt(bottomDocSum * bottomQuerySum); // bottom number of the cosine
+																					// similarity
+						double score = topSum / bottom; // cosine similarity score for the sentence
+						// sentences can have the same score, so add them as a list of sentences for
+						// each score
 						ArrayList<Integer> sentencesWithScores = new ArrayList<Integer>();
 						if (sentenceCosineScores.containsKey(score)) {
 							sentencesWithScores = sentenceCosineScores.get(score);
@@ -311,6 +341,7 @@ public class Query {
 					}
 
 					int top2 = 1;
+					// get the sentences with the top 2 scores
 					for (double score : sentenceCosineScores.descendingKeySet()) {
 						ArrayList<Integer> sentencesWithScores = sentenceCosineScores.get(score);
 						for (int sentenceID : sentencesWithScores) {
@@ -338,21 +369,6 @@ public class Query {
 
 	}
 
-	private String stopAndStem(String line) {
-		// stemmer from https://opennlp.apache.org/ - apache openNLP 1.9.1
-		PorterStemmer stemmer = new PorterStemmer();
-		String[] tokens = line.split("\\s+");
-		String result = "";
-		for (String token : tokens) {
-			// if token isn't a stopword, stem it and add to result
-			if (!stopwords.contains(token)) {
-				result += " " + stemmer.stem(token);
-			}
-		}
-		return result;
-	}
-
 	public static void main(String[] args) {
-
 	}
 }

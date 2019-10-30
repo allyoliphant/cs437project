@@ -25,7 +25,6 @@ import org.apache.commons.csv.CSVRecord;
 
 // http://fastutil.di.unimi.it/
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
-import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -33,6 +32,7 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
 public class Indexing {
 
+	// path to the different files used
 	private String pathToCSV = "src/main/resources/collection/wikipedia_text_files.csv";
 	private String pathToSERIndex = "src/main/resources/index.ser";
 	private String pathToUnsortedIndex = "src/main/resources/unsorted-index.txt";
@@ -42,13 +42,12 @@ public class Indexing {
 	private String pathToStopwords = "src/main/resources/stopwords";
 
 	/**
-	 * Lower cases and removes certain characters
+	 * Lower cases the string and removes certain characters
 	 * 
 	 * @param line that needs to be tokenized
 	 * @return tokenized line
 	 */
 	public String caseAndCharacters(String line) {
-
 		String s1 = line.toLowerCase();
 
 		// see src/main/resources/asciifull.gif for ascii code translations
@@ -66,19 +65,19 @@ public class Indexing {
 	}
 
 	/**
-	 * Remove stopwords and stem remaining words
+	 * Remove stopwords from string and stem remaining words
 	 * 
-	 * @param line to have stopwords removed and remaining words stemmed
-	 * @return line after stopwords removed and remaining words stemmed
-	 * @throws IOException
+	 * @param line to have stopwords removed and remaining words to stemmed
+	 * @return line after stopwords removed and remaining words are stemmed
 	 */
 	public String stopAndStem(String line) {
-		ObjectOpenHashSet<String> stopwords = getStopwords();
+		ObjectOpenHashSet<String> stopwords = getStopwords(); // get the set of stopwords
 		PorterStemmer stemmer = new PorterStemmer();
-		String[] tokens = line.split("\\s+");
+		String[] tokens = line.split("\\s+"); // split the string into an array of tokens
 		String result = "";
 		for (String token : tokens) {
-			// if token isn't a stopword, stem it and add to result
+			// if token isn't a stopword, stem it and add it to the result
+			// if token is a stopword, don't include it in the result
 			if (!stopwords.contains(token)) {
 				result += " " + stemmer.stem(token);
 			}
@@ -87,25 +86,12 @@ public class Indexing {
 	}
 
 	/**
-	 * Remove stopwords and stem remaining words
+	 * Get a subset of the index that contains all the terms that are in the index
+	 * Doesn't return the whole index (causes an out-of-memory error)
 	 * 
-	 * @param line to have stopwords removed and remaining words stemmed
-	 * @return line after stopwords removed and remaining words stemmed
-	 * @throws IOException
+	 * @param terms we want from the index
+	 * @return subset of the index
 	 */
-	public String stopAndStem(String line, ObjectOpenHashSet<String> stopwords) {
-		PorterStemmer stemmer = new PorterStemmer();
-		String[] tokens = line.split("\\s+");
-		String result = "";
-		for (String token : tokens) {
-			// if token isn't a stopword, stem it and add to result
-			if (!stopwords.contains(token)) {
-				result += " " + stemmer.stem(token);
-			}
-		}
-		return result;
-	}
-
 	@SuppressWarnings("unchecked")
 	public Object2ObjectOpenHashMap<String, Int2IntOpenHashMap> getIndex(String[] terms) {
 		Object2ObjectOpenHashMap<String, Int2IntOpenHashMap> index = new Object2ObjectOpenHashMap<String, Int2IntOpenHashMap>();
@@ -116,6 +102,7 @@ public class Indexing {
 			index = (Object2ObjectOpenHashMap<String, Int2IntOpenHashMap>) in.readObject();
 			in.close();
 
+			// get just the entries of each term (if in the index)
 			for (String word : terms) {
 				if (index.containsKey(word)) {
 					result.put(word, index.get(word));
@@ -127,6 +114,12 @@ public class Indexing {
 		return result;
 	}
 
+	/**
+	 * Get the max frequency of terms for the provided documents
+	 * 
+	 * @param set of document ids
+	 * @return map of doc ids and max frequencies
+	 */
 	public Int2IntOpenHashMap getMaxDocFreq(IntSet resources) {
 		Int2IntOpenHashMap maxFreq = new Int2IntOpenHashMap();
 		try {
@@ -134,6 +127,8 @@ public class Indexing {
 			ObjectInputStream in = new ObjectInputStream(fileIn);
 			Int2IntOpenHashMap allMaxFreq = (Int2IntOpenHashMap) in.readObject();
 			in.close();
+
+			// get the entries of each document in resources
 			for (int doc : resources) {
 				maxFreq.put(doc, allMaxFreq.get(doc));
 			}
@@ -187,6 +182,7 @@ public class Indexing {
 			Reader in = new FileReader(pathToCSV);
 			CSVParser records = CSVFormat.EXCEL.withFirstRecordAsHeader().parse(in);
 
+			// parse the wiki collection
 			for (CSVRecord record : records) {
 				System.out.println("freq: on wiki " + record.get("id") + " of 1,662,756");
 				String content = " " + record.get("content") + " ";
@@ -265,8 +261,8 @@ public class Indexing {
 	}
 
 	/**
-	 * Parse through the csv file and add words, document ids, and frequency to
-	 * index in no particular order
+	 * Parse through the csv file and add unstemmed words, document ids, and
+	 * frequency to index in no particular order
 	 * 
 	 * @throws IOException
 	 */
@@ -277,6 +273,8 @@ public class Indexing {
 
 			System.out.println("get collection/build unsorted index....");
 			CSVParser records = CSVFormat.EXCEL.withFirstRecordAsHeader().parse(new FileReader(pathToCSV));
+
+			// parse through the wiki collection
 			for (CSVRecord record : records) {
 				System.out.println("build: on wiki " + record.get("id") + " of 1,662,756");
 				String[] content = caseAndCharacters(" " + record.get("content") + " ").split("\\s+");
@@ -309,7 +307,7 @@ public class Indexing {
 	}
 
 	/**
-	 * Builds a HashMap of stopwords to be use when removing stopwords.
+	 * Builds a HashSet of stopwords to be used when removing stopwords.
 	 * 
 	 * @throws IOException
 	 */
@@ -352,7 +350,7 @@ public class Indexing {
 	}
 
 	/**
-	 * Stem words and add to the index, sort the index, then write it to a file
+	 * Stem words and add them to the index, then write the index to a file
 	 * 
 	 * @throws IOException
 	 */
@@ -365,10 +363,12 @@ public class Indexing {
 			BufferedReader in = new BufferedReader(new FileReader(pathToUnsortedIndex));
 			int count = 1;
 			String line;
+
+			// each entry in the unstemmed index
 			while ((line = in.readLine()) != null) {
 				System.out.println("stem: on word " + count + " of 400,135");
-				String[] entry = line.split("\\s+"); // entry[0] is the word and entry[1 to n-1] are the docIDs and
-														// freqs
+				// entry[0] is the word and entry[1 to n-1] are the docIDs and frequencies
+				String[] entry = line.split("\\s+");
 				count++;
 				if (entry.length > 1) {
 					String stemmed = stemmer.stem(entry[0]);
@@ -378,7 +378,7 @@ public class Indexing {
 							// doc[0] is the id and doc[1] is the freq
 							String[] doc = entry[i].replaceAll("[{}]", "").split(",");
 							if (updatedDocList.containsKey(Integer.parseInt(doc[0]))) {
-								// if doc and term combo already in index, add freqs
+								// if doc and term combo already in index, just add frequencies
 								updatedDocList.replace(Integer.parseInt(doc[0]),
 										updatedDocList.get(Integer.parseInt(doc[0])) + Integer.parseInt(doc[1]));
 							} else {
@@ -388,7 +388,7 @@ public class Indexing {
 						}
 						index.replace(stemmed, updatedDocList);
 					} else {
-						// new word
+						// new stemmed word
 						Int2IntOpenHashMap docList = new Int2IntOpenHashMap(); // map of docIDs and freqs
 						for (int i = 1; i < entry.length; i++) {
 							String[] doc = entry[i].replaceAll("[{}]", "").split(",");
